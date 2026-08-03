@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -7,23 +7,36 @@ const inter = Inter({
   subsets: ["latin", "latin-ext"],
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin", "latin-ext"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
+});
+
 export const metadata: Metadata = {
-  title: "Modd AI — Fikirden videoya yapay zekâ prodüksiyon",
+  title: "MODD-AI — Artist + AI. Creative AI Studio",
   description:
-    "MODD/group'un yapay zekâ ajansı. Kamera yok. Set yok. Fikirden videoya tamamen yapay zekâ prodüksiyon.",
+    "Not one click AI. Human-directed creativity, amplified by artificial intelligence. The AI studio of MODD/group.",
   openGraph: {
-    title: "Modd AI — Fikirden videoya yapay zekâ prodüksiyon",
+    title: "MODD-AI — Artist + AI.",
     description:
-      "MODD/group'un yapay zekâ ajansı. Statik görselleri sinematik deneyimlere dönüştürüyoruz.",
-    locale: "tr_TR",
+      "Human-directed creativity, amplified by artificial intelligence.",
     type: "website",
   },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="tr" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col bg-bg text-fg">{children}</body>
     </html>
   );
 }
