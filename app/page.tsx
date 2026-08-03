@@ -1,69 +1,166 @@
-import Image from "next/image";
+"use client";
+
+import { MotionConfig, motion } from "framer-motion";
+
+const fadeUp = {
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-80px" },
+  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
+};
+
+const pillars = [
+  {
+    title: "AI video prodüksiyon",
+    body: "Kamera yok. Set yok. Fikirden videoya tamamen yapay zekâ prodüksiyon.",
+  },
+  {
+    title: "AI görsel prodüksiyon",
+    body: "Statik görselleri sinematik deneyimlere taşıyoruz. Kötü renderları güçlü görsellere dönüştürüyoruz.",
+  },
+  {
+    title: "AI destekli pazarlama",
+    body: "Yapay zekânın pazarlamayı nasıl dönüştürdüğünü işimizin merkezine koyuyoruz. Araçları izlemiyoruz, üretiyoruz.",
+  },
+];
+
+const transforms = [
+  ["statik görseller", "sinematik deneyimler"],
+  ["kötü renderlar", "güçlü görseller"],
+  ["fikir", "video"],
+];
+
+const stats = [
+  ["15", "yıllık ajans deneyimi"],
+  ["59", "kişilik ekip"],
+  ["300+", "marka referansı"],
+  ["3", "ofis — Türkiye, UK, USA"],
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <MotionConfig reducedMotion="user">
+      <header className="flex items-center justify-between px-6 py-5 md:px-12">
+        <span className="text-sm font-semibold tracking-tight">
+          MODD<span className="text-accent">/</span>ai
+        </span>
+        <a
+          href="https://www.moddworks.com"
+          className="text-sm text-neutral-400 transition-colors hover:text-accent"
+        >
+          moddworks.com
+        </a>
+      </header>
+
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="px-6 pb-24 pt-20 md:px-12 md:pb-36 md:pt-32">
+          <motion.p
+            {...fadeUp}
+            className="mb-6 text-sm uppercase tracking-[0.2em] text-neutral-500"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            MODD/group&apos;un yapay zekâ ajansı
+          </motion.p>
+          <motion.h1
+            {...fadeUp}
+            className="max-w-4xl text-4xl font-semibold lowercase leading-[1.05] tracking-tight md:text-7xl"
           >
-            Documentation
-          </a>
-        </div>
+            kamera yok. set yok.
+            <br />
+            <span className="text-accent">fikirden videoya.</span>
+          </motion.h1>
+          <motion.p
+            {...fadeUp}
+            className="mt-8 max-w-xl text-lg text-neutral-400"
+          >
+            Tamamen yapay zekâ prodüksiyon. Markalar için üretiyoruz,
+            dönüştürüyoruz, iyileştiriyoruz.
+          </motion.p>
+          <motion.div {...fadeUp} className="mt-10">
+            <a
+              href="https://www.moddworks.com"
+              className="inline-block bg-accent px-6 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-80"
+            >
+              İşlerimiz ve referanslarımız
+            </a>
+          </motion.div>
+        </section>
+
+        {/* Ne yapıyoruz */}
+        <section className="border-t border-neutral-900 px-6 py-24 md:px-12">
+          <motion.h2
+            {...fadeUp}
+            className="mb-12 text-sm uppercase tracking-[0.2em] text-neutral-500"
+          >
+            Ne yapıyoruz
+          </motion.h2>
+          <div className="grid gap-10 md:grid-cols-3">
+            {pillars.map((p) => (
+              <motion.div key={p.title} {...fadeUp}>
+                <h3 className="mb-3 text-xl font-semibold tracking-tight">
+                  {p.title}
+                </h3>
+                <p className="text-neutral-400">{p.body}</p>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* Dönüşüm */}
+        <section className="border-t border-neutral-900 px-6 py-24 md:px-12">
+          <div className="space-y-6">
+            {transforms.map(([from, to]) => (
+              <motion.p
+                key={from}
+                {...fadeUp}
+                className="text-2xl font-semibold lowercase tracking-tight md:text-4xl"
+              >
+                <span className="text-neutral-500">{from}</span>
+                <span className="mx-4 text-accent">→</span>
+                {to}
+              </motion.p>
+            ))}
+          </div>
+        </section>
+
+        {/* MODD/group güven bandı */}
+        <section className="border-t border-neutral-900 px-6 py-24 md:px-12">
+          <div className="grid gap-10 md:grid-cols-4">
+            {stats.map(([n, label]) => (
+              <motion.div key={label} {...fadeUp}>
+                <p className="text-4xl font-semibold text-accent">{n}</p>
+                <p className="mt-2 text-sm text-neutral-400">{label}</p>
+              </motion.div>
+            ))}
+          </div>
+          <motion.p {...fadeUp} className="mt-12 text-sm text-neutral-500">
+            Google Partner · Meta Marketing Partner · Semrush sertifikalı
+          </motion.p>
+        </section>
       </main>
-    </div>
+
+      <footer className="border-t border-neutral-900 px-6 py-16 md:px-12">
+        <motion.p
+          {...fadeUp}
+          className="text-2xl font-semibold tracking-tight md:text-3xl"
+        >
+          Üstünlük Taslanmaz, <span className="text-accent">Tasarlanır.</span>
+        </motion.p>
+        <div className="mt-8 flex flex-wrap gap-6 text-sm text-neutral-400">
+          <a
+            href="https://www.moddworks.com"
+            className="transition-colors hover:text-accent"
+          >
+            www.moddworks.com
+          </a>
+          <a
+            href="https://www.instagram.com/modd_ai"
+            className="transition-colors hover:text-accent"
+          >
+            Instagram — @modd_ai
+          </a>
+        </div>
+      </footer>
+    </MotionConfig>
   );
 }
