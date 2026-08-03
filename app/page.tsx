@@ -1,6 +1,7 @@
 import SmoothScroll from "@/animations/SmoothScroll";
 import Header from "@/components/layout/Header";
 import Hero from "@/components/sections/Hero";
+import Showreel from "@/components/sections/Showreel";
 import Manifesto from "@/components/sections/Manifesto";
 import Services from "@/components/sections/Services";
 import SelectedWork from "@/components/sections/SelectedWork";
@@ -15,6 +16,7 @@ export default function Home() {
       <Header />
       <main>
         <Hero />
+        <Showreel />
         <Manifesto />
         <Services />
         <SelectedWork />

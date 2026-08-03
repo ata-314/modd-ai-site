@@ -28,6 +28,7 @@
   --font-display: var(--font-space-grotesk);
   --font-body: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
+  --font-script: var(--font-caveat);
 }
 
 html {
@@ -115,7 +116,23 @@ body {
   animation: drift 9s ease-in-out infinite;
 }
 
+/* Infinite marquee — duplicated track scrolls one full copy */
+@keyframes marquee-x {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee-x 28s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
   html {
     scroll-behavior: auto;
   }

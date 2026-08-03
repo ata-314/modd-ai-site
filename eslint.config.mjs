@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
       "components/three/**",
       "components/sections/Hero.tsx",
       "components/sections/Process.tsx",
+      "components/sections/Showreel.tsx",
     ],
     rules: {
       "react-hooks/immutability": "off",

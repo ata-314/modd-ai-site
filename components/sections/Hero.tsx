@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import SceneFallback from "@/components/three/SceneFallback";
+import CodeSeaCanvas from "@/components/three/CodeSeaCanvas";
+import Marquee from "@/components/ui/Marquee";
 import { siteContent } from "@/data/siteContent";
 
 const BuildingScene = dynamic(() => import("@/components/three/BuildingScene"), {
@@ -12,14 +14,12 @@ const BuildingScene = dynamic(() => import("@/components/three/BuildingScene"), 
 });
 
 const SNIPPET_POSITIONS = [
-  "left-[6%] top-[18%]",
-  "right-[8%] top-[24%] hidden md:block",
+  "left-[6%] top-[26%]",
+  "right-[8%] top-[30%] hidden md:block",
   "left-[10%] top-[58%] hidden md:block",
   "right-[6%] top-[64%]",
-  "left-[38%] top-[12%] hidden lg:block",
-  "right-[30%] bottom-[18%] hidden lg:block",
   "left-[16%] bottom-[24%] hidden md:block",
-  "right-[14%] top-[42%] hidden lg:block",
+  "right-[14%] top-[46%] hidden lg:block",
 ];
 
 export default function Hero() {
@@ -78,7 +78,11 @@ export default function Hero() {
     gsap.registerPlugin(ScrollTrigger);
 
     if (reduced) {
-      gsap.set(el.querySelectorAll(".hero-seq"), { autoAlpha: 1 });
+      gsap.set(el.querySelectorAll(".hero-seq, .hero-mask-line"), {
+        autoAlpha: 1,
+        yPercent: 0,
+        y: 0,
+      });
       progressRef.current = 1;
       return;
     }
@@ -105,23 +109,37 @@ export default function Hero() {
       );
       tl.to(".hero-hint", { autoAlpha: 0, duration: 0.06 }, 0.08);
       tl.to(".hero-code", { autoAlpha: 0, stagger: 0.008, duration: 0.1 }, 0.55);
+
+      // Headline lines rise from behind the building (masked + occluded).
       tl.fromTo(
-        ".hero-l1",
-        { autoAlpha: 0, y: 46 },
-        { autoAlpha: 1, y: 0, duration: 0.12, ease: "power2.out" },
-        0.5
+        ".hero-l1 .hero-mask-line",
+        { yPercent: 120 },
+        { yPercent: 0, duration: 0.14, ease: "power2.out" },
+        0.46
       );
       tl.fromTo(
-        ".hero-l2",
-        { autoAlpha: 0, y: 54, scale: 0.97 },
-        { autoAlpha: 1, y: 0, scale: 1, duration: 0.13, ease: "power2.out" },
-        0.72
+        ".hero-l2 .hero-mask-line",
+        { yPercent: 130 },
+        { yPercent: 0, duration: 0.16, ease: "power2.out" },
+        0.64
       );
       tl.fromTo(
         ".hero-sub",
-        { autoAlpha: 0, y: 24 },
-        { autoAlpha: 1, y: 0, duration: 0.1 },
-        0.86
+        { autoAlpha: 0, y: 22 },
+        { autoAlpha: 1, y: 0, duration: 0.09, ease: "power1.out" },
+        0.8
+      );
+      tl.fromTo(
+        ".hero-ctas",
+        { autoAlpha: 0, y: 26 },
+        { autoAlpha: 1, y: 0, duration: 0.09, ease: "power1.out" },
+        0.85
+      );
+      tl.fromTo(
+        ".hero-marquee",
+        { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 0.08 },
+        0.9
       );
 
       if (!useWebGL) {
@@ -142,68 +160,98 @@ export default function Hero() {
   return (
     <section ref={sectionRef} className={`relative ${sectionHeight}`} id="top">
       <div className={`${reduced ? "relative min-h-screen" : "sticky top-0 h-screen"} overflow-hidden bg-bg`}>
-        {/* Scene */}
-        {mounted && useWebGL && !reduced && (
-          <BuildingScene
-            imageUrl={hero.building.texture}
-            progressRef={progressRef}
-            onReady={onSceneReady}
-          />
-        )}
-        {mounted && (!useWebGL || reduced) && (
-          <div className="hero-fallback-img absolute inset-0">
-            <SceneFallback />
-          </div>
-        )}
-
-        {/* Floating code fragments */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          {hero.codeSnippets.map((snip, i) => (
-            <span
-              key={snip}
-              className={`hero-code hero-seq absolute font-mono text-[11px] tracking-wide opacity-0 ${
-                SNIPPET_POSITIONS[i % SNIPPET_POSITIONS.length]
-              } ${i % 3 === 0 ? "text-accent/70" : "text-muted/80"}`}
-            >
-              {snip}
-            </span>
-          ))}
+        {/* Layer 0 — flowing code sea (behind everything) */}
+        <div className="absolute inset-0 z-0">
+          <CodeSeaCanvas />
         </div>
 
-        {/* Headline block */}
-        <div className="absolute inset-x-0 bottom-0 px-6 pb-14 md:px-12 md:pb-20">
+        {/* Layer 1 — headline, sits BEHIND the building canvas so lines
+            emerge from behind the roofline */}
+        <div className="absolute inset-x-0 top-[9vh] z-10 px-6 text-center md:top-[10vh]">
           <h1 className="font-display leading-[0.98] tracking-tight">
-            <span className="hero-l1 hero-seq block text-[length:var(--step-3)] font-medium opacity-0">
-              {hero.line1}
+            <span className="hero-l1 block overflow-hidden">
+              <span className="hero-mask-line block text-[length:var(--step-3)] font-medium will-change-transform">
+                {hero.line1}
+              </span>
             </span>
-            <span className="hero-l2 hero-seq block text-[length:var(--step-display)] font-bold text-accent opacity-0">
-              {hero.line2}
+            <span className="hero-l2 block overflow-hidden pb-[0.12em]">
+              <span className="hero-mask-line block will-change-transform">
+                <span className="font-[family-name:var(--font-caveat)] text-[calc(var(--step-display)*1.14)] font-bold leading-[0.9] text-accent">
+                  Artist
+                </span>
+                <span className="text-[length:var(--step-display)] font-bold"> + AI.</span>
+              </span>
             </span>
           </h1>
-          <div className="hero-sub hero-seq mt-6 flex flex-wrap items-center gap-6 opacity-0">
-            <p className="max-w-md text-[length:var(--step-0)] text-muted">
+        </div>
+
+        {/* Layer 2 — WebGL building (occludes the headline while it rises) */}
+        <div className="pointer-events-none absolute inset-0 z-20">
+          {mounted && useWebGL && !reduced && (
+            <BuildingScene
+              imageUrl={hero.building.texture}
+              progressRef={progressRef}
+              onReady={onSceneReady}
+            />
+          )}
+          {mounted && (!useWebGL || reduced) && (
+            <div className="hero-fallback-img absolute inset-0">
+              <SceneFallback />
+            </div>
+          )}
+          {/* Floating code fragments — same depth as the building */}
+          <div aria-hidden="true" className="absolute inset-0">
+            {hero.codeSnippets.slice(0, 6).map((snip, i) => (
+              <span
+                key={snip}
+                className={`hero-code hero-seq absolute font-mono text-[11px] tracking-wide opacity-0 ${
+                  SNIPPET_POSITIONS[i % SNIPPET_POSITIONS.length]
+                } ${i % 3 === 0 ? "text-accent/70" : "text-muted/80"}`}
+              >
+                {snip}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Layer 3 — subline, pill CTAs, marquee (above the building) */}
+        <div className="absolute inset-x-0 bottom-0 z-30">
+          <div className="px-6 pb-8 text-center">
+            <p
+              className="hero-sub hero-seq mx-auto max-w-md text-[length:var(--step-0)] text-fg/75 opacity-0"
+              style={{ textShadow: "0 1px 12px rgba(3,3,3,0.9)" }}
+            >
               {hero.subline}
             </p>
-            <div className="flex gap-3">
+            <div className="hero-ctas hero-seq mt-6 flex flex-wrap items-center justify-center gap-4 opacity-0">
               <a
                 href={hero.ctaPrimary.href}
-                className="border border-line bg-fg px-5 py-3 font-mono text-xs uppercase tracking-widest text-bg transition-colors hover:bg-accent hover:text-black focus-visible:bg-accent active:translate-y-px"
+                className="group inline-flex items-center gap-2 rounded-full bg-fg px-7 py-3.5 font-mono text-xs uppercase tracking-widest text-bg transition-colors hover:bg-accent hover:text-black focus-visible:bg-accent focus-visible:text-black active:translate-y-px"
               >
                 {hero.ctaPrimary.label}
+                <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
+                  →
+                </span>
               </a>
               <a
                 href={hero.ctaSecondary.href}
-                className="border border-line px-5 py-3 font-mono text-xs uppercase tracking-widest text-fg transition-colors hover:border-accent hover:text-accent active:translate-y-px"
+                className="group inline-flex items-center gap-2 rounded-full border border-line bg-bg/60 px-7 py-3.5 font-mono text-xs uppercase tracking-widest text-fg backdrop-blur-sm transition-colors hover:border-accent hover:text-accent active:translate-y-px"
               >
                 {hero.ctaSecondary.label}
+                <span aria-hidden="true" className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
+                  ↗
+                </span>
               </a>
             </div>
+          </div>
+          <div className="hero-marquee hero-seq opacity-0">
+            <Marquee items={hero.marquee} />
           </div>
         </div>
 
         {/* Scroll hint */}
         {!reduced && (
-          <div className="hero-hint absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 md:bottom-8">
+          <div className="hero-hint absolute bottom-24 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-2">
             <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
               Scroll
             </span>
@@ -214,7 +262,7 @@ export default function Hero() {
         {/* Loader */}
         {!loaderGone && (
           <div
-            className={`absolute inset-0 z-20 flex flex-col items-center justify-center bg-bg transition-opacity duration-500 ${
+            className={`absolute inset-0 z-40 flex flex-col items-center justify-center bg-bg transition-opacity duration-500 ${
               ready ? "opacity-0" : "opacity-100"
             }`}
             aria-hidden={ready}

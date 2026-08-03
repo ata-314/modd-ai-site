@@ -86,7 +86,7 @@ export default function BuildingScene({ imageUrl, progressRef, onReady }: Props)
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         camera={{ fov: 38, position: [0, 0, 7.3], near: 0.1, far: 30 }}
       >
-        <group position={[0, -0.15, 0]}>
+        <group position={[0, -0.45, 0]}>
           {texture && (
             <BuildingPlane
               texture={texture}

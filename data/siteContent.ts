@@ -28,6 +28,25 @@ export const siteContent = {
       title: "MODD-AI",
       caption: "INITIALIZING CREATIVE SYSTEM",
     },
+    // Marquee strip at the hero's bottom edge. Keyword-based for now —
+    // swap in approved client brand names/logos when the human provides them.
+    marquee: [
+      "AI Films",
+      "Creative Campaigns",
+      "Digital Experiences",
+      "Brand Systems",
+      "Artist + AI",
+      "MODD/group — 15 years",
+      "300+ brand references",
+    ],
+  },
+  showreel: {
+    // Drop the real showreel URL + poster here; empty src renders a clearly
+    // labeled placeholder frame instead.
+    src: "",
+    poster: "",
+    label: "Showreel",
+    placeholderNote: "Showreel — placeholder · real reel pending",
   },
   manifesto: {
     heading: ["AI does not replace the artist.", "It expands the possible."],
