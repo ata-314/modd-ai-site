@@ -17,11 +17,13 @@ export default function CodeSeaCanvas() {
     if (!ctx) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     let raf = 0;
     let running = true;
     let w = 0;
     let h = 0;
+    const mouse = { x: -9999, y: -9999 };
 
     interface Glyph {
       x: number;
@@ -65,20 +67,37 @@ export default function CodeSeaCanvas() {
       ctx.clearRect(0, 0, w, h);
       ctx.textBaseline = "middle";
       for (const g of glyphs) {
-        // Horizontal drift + rolling vertical wave, Conos-sea style.
-        const x = ((g.x + t * g.speed * 0.32) % (w + 40)) - 20;
+        // Constant forward drift + rolling vertical wave, cyberpunk sea.
+        let x = ((g.x + t * g.speed * 0.55) % (w + 40)) - 20;
         const wave =
           Math.sin(x * 0.008 + t * 0.5 + g.phase) * 14 +
           Math.sin(x * 0.003 - t * 0.22) * 22;
-        const y = g.y + wave;
+        let y = g.y + wave;
+
+        // Cursor interaction: nearby glyphs part away and light up.
+        let boost = 0;
+        const dx = x - mouse.x;
+        const dy = y - mouse.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 24000) {
+          const d = Math.sqrt(d2) || 1;
+          const push = 1 - d / 155;
+          x += (dx / d) * push * 26;
+          y += (dy / d) * push * 26;
+          boost = push;
+        }
+
         if (Math.floor(t * 2 + g.flip) % 97 === 0) {
           g.char = CHARS[Math.floor(Math.random() * CHARS.length)];
         }
         const depth = 0.35 + 0.65 * (g.y / h);
         ctx.font = `${g.size}px ui-monospace, Menlo, monospace`;
-        ctx.fillStyle = g.accent
-          ? `rgba(197, 255, 33, ${0.16 * depth})`
-          : `rgba(150, 157, 163, ${0.13 * depth})`;
+        const limeA = 0.16 * depth + boost * 0.45;
+        const grayA = 0.13 * depth + boost * 0.35;
+        ctx.fillStyle =
+          g.accent || boost > 0.55
+            ? `rgba(197, 255, 33, ${limeA})`
+            : `rgba(150, 157, 163, ${grayA})`;
         ctx.fillText(g.char, x, y);
       }
     };
@@ -102,6 +121,20 @@ export default function CodeSeaCanvas() {
     };
     window.addEventListener("resize", onResize);
 
+    const onMove = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    };
+    const onLeave = () => {
+      mouse.x = -9999;
+      mouse.y = -9999;
+    };
+    if (finePointer && !reduced) {
+      window.addEventListener("pointermove", onMove, { passive: true });
+      window.addEventListener("pointerout", onLeave, { passive: true });
+    }
+
     const io = new IntersectionObserver(([entry]) => {
       const visible = entry.isIntersecting && !document.hidden;
       if (visible && !running && !reduced) {
@@ -118,6 +151,8 @@ export default function CodeSeaCanvas() {
       running = false;
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerout", onLeave);
       io.disconnect();
     };
   }, []);

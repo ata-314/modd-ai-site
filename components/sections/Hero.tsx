@@ -78,7 +78,7 @@ export default function Hero() {
     gsap.registerPlugin(ScrollTrigger);
 
     if (reduced) {
-      gsap.set(el.querySelectorAll(".hero-seq, .hero-mask-line"), {
+      gsap.set(el.querySelectorAll(".hero-seq, .hero-l1, .hero-l2"), {
         autoAlpha: 1,
         yPercent: 0,
         y: 0,
@@ -110,18 +110,20 @@ export default function Hero() {
       tl.to(".hero-hint", { autoAlpha: 0, duration: 0.06 }, 0.08);
       tl.to(".hero-code", { autoAlpha: 0, stagger: 0.008, duration: 0.1 }, 0.55);
 
-      // Headline lines rise from behind the building (masked + occluded).
+      // Headline lines start physically low — hidden by the building's
+      // pixels (this layer sits behind the canvas) — and rise out from
+      // behind the roofline as scroll progresses.
       tl.fromTo(
-        ".hero-l1 .hero-mask-line",
-        { yPercent: 120 },
-        { yPercent: 0, duration: 0.14, ease: "power2.out" },
-        0.46
+        ".hero-l1",
+        { y: "36vh" },
+        { y: 0, duration: 0.2, ease: "power2.out" },
+        0.44
       );
       tl.fromTo(
-        ".hero-l2 .hero-mask-line",
-        { yPercent: 130 },
-        { yPercent: 0, duration: 0.16, ease: "power2.out" },
-        0.64
+        ".hero-l2",
+        { y: "44vh" },
+        { y: 0, duration: 0.22, ease: "power2.out" },
+        0.58
       );
       tl.fromTo(
         ".hero-sub",
@@ -167,19 +169,18 @@ export default function Hero() {
 
         {/* Layer 1 — headline, sits BEHIND the building canvas so lines
             emerge from behind the roofline */}
-        <div className="absolute inset-x-0 top-[9vh] z-10 px-6 text-center md:top-[10vh]">
+        <div className="absolute inset-x-0 top-[8vh] z-10 px-6 text-center md:top-[9vh]">
           <h1 className="font-display leading-[0.98] tracking-tight">
-            <span className="hero-l1 block overflow-hidden">
-              <span className="hero-mask-line block text-[length:var(--step-3)] font-medium will-change-transform">
-                {hero.line1}
-              </span>
+            <span className="hero-l1 block text-[length:var(--step-3)] font-medium will-change-transform">
+              {hero.line1}
             </span>
-            <span className="hero-l2 block overflow-hidden pb-[0.12em]">
-              <span className="hero-mask-line block will-change-transform">
-                <span className="font-[family-name:var(--font-caveat)] text-[calc(var(--step-display)*1.14)] font-bold leading-[0.9] text-accent">
-                  Artist
-                </span>
-                <span className="text-[length:var(--step-display)] font-bold"> + AI.</span>
+            <span className="hero-l2 block pb-[0.1em] will-change-transform">
+              <span className="font-[family-name:var(--font-instrument-serif)] text-[calc(var(--step-display)*1.22)] italic leading-[0.9] tracking-normal text-fg">
+                Artist
+              </span>
+              <span className="text-[length:var(--step-display)] font-bold">
+                {" "}
+                + <span className="text-accent">AI.</span>
               </span>
             </span>
           </h1>
@@ -273,7 +274,26 @@ export default function Hero() {
             <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.35em] text-muted">
               {hero.loader.caption}
             </p>
-            <p className="mt-6 font-mono text-sm text-accent tabular-nums">
+            {/* Boot log — lines "load" with the progress counter */}
+            <div
+              className="mt-8 h-32 w-72 text-left font-mono text-[11px] leading-6 text-muted"
+              aria-hidden="true"
+            >
+              {hero.loader.lines
+                .slice(
+                  0,
+                  Math.max(1, Math.ceil((pct / 100) * hero.loader.lines.length))
+                )
+                .map((line, i, arr) => (
+                  <p key={line}>
+                    <span className="text-accent">›</span> {line}
+                    {i === arr.length - 1 && pct < 100 && (
+                      <span className="blink text-accent">▌</span>
+                    )}
+                  </p>
+                ))}
+            </div>
+            <p className="mt-2 font-mono text-sm text-accent tabular-nums">
               {String(Math.min(pct, 100)).padStart(2, "0")}%
             </p>
           </div>

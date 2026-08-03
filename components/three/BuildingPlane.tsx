@@ -42,24 +42,26 @@ const fragmentShader = /* glsl */ `
     vec3 holo = lime * (grid * 0.30 + rim * 0.85) + coolGray * lum * 0.22;
 
     // Cell-based reveal of the real texture (selection-box aesthetic).
-    float reveal = smoothstep(0.42, 0.80, uProgress);
+    // Kept subdued — the glyph particles are the substance of the building,
+    // the photo only ghosts through underneath.
+    float reveal = smoothstep(0.5, 0.85, uProgress);
     float n = hash(floor(vUv * vec2(72.0, 30.0)));
     float shown = step(n, reveal);
 
     // Light sweep across the facade as it materializes.
     float sweepPos = uProgress * 1.9 - 0.3;
-    float sweep = smoothstep(0.22, 0.0, abs(vUv.x + vUv.y * 0.4 - sweepPos)) * 0.10 * reveal;
+    float sweep = smoothstep(0.22, 0.0, abs(vUv.x + vUv.y * 0.4 - sweepPos)) * 0.08 * reveal;
 
-    vec3 real = vec3(lum) * 1.06;
-    vec3 col = mix(holo, real, shown * 0.72);
-    col += holo * 0.30 * (1.0 - shown * 0.55);
+    vec3 real = vec3(lum) * 1.04;
+    vec3 col = mix(holo, real, shown * 0.5);
+    col += holo * 0.34 * (1.0 - shown * 0.4);
     col += vec3(sweep);
 
     // Early phase: outlines only, body fades in with progress.
     float body = smoothstep(0.16, 0.52, uProgress);
     float shape = clamp(rim * 0.95 + grid * 0.28, 0.0, 1.0);
     float appear = smoothstep(0.02, 0.12, uProgress);
-    float outA = alpha * mix(shape, 1.0, body) * appear;
+    float outA = alpha * mix(shape, 0.82, body) * appear;
 
     gl_FragColor = vec4(col, outA);
   }

@@ -27,6 +27,14 @@ export const siteContent = {
     loader: {
       title: "MODD-AI",
       caption: "INITIALIZING CREATIVE SYSTEM",
+      lines: [
+        "import creative_system",
+        "loading facade_geometry ... ok",
+        "compiling shaders [vert/frag] ... ok",
+        "sampling silhouette :: 9000 pts ... ok",
+        "binding artist_input ...",
+        "human_control = true",
+      ],
     },
     // Marquee strip at the hero's bottom edge. Keyword-based for now —
     // swap in approved client brand names/logos when the human provides them.

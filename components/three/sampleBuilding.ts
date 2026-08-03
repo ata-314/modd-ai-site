@@ -10,9 +10,10 @@ export interface BuildingSample {
   sizes: Float32Array;
   glyphs: Float32Array; // atlas cell index
   accents: Float32Array; // 1 = lime, 0 = gray
+  lums: Float32Array; // facade pixel luminance — glyphs render the image
 }
 
-const GRID_W = 280;
+const GRID_W = 300;
 
 export async function sampleBuilding(
   url: string,
@@ -36,6 +37,10 @@ export async function sampleBuilding(
   const alphaAt = (x: number, y: number) => {
     if (x < 0 || y < 0 || x >= gw || y >= gh) return 0;
     return data[(y * gw + x) * 4 + 3];
+  };
+  const lumAt = (x: number, y: number) => {
+    const i = (y * gw + x) * 4;
+    return (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
   };
 
   const edges: Array<[number, number]> = [];
@@ -70,6 +75,7 @@ export async function sampleBuilding(
   const sizes = new Float32Array(n);
   const glyphs = new Float32Array(n);
   const accents = new Float32Array(n);
+  const lums = new Float32Array(n);
 
   for (let i = 0; i < n; i++) {
     const { x, y, edge } = picked[i];
@@ -80,19 +86,21 @@ export async function sampleBuilding(
     starts[i * 3 + 1] = (Math.random() - 0.5) * planeH * 2.6;
     starts[i * 3 + 2] = (Math.random() - 0.5) * 3.2;
 
+    // Snap close to the facade surface — the glyphs ARE the building.
     targets[i * 3] = (u - 0.5) * planeW;
     targets[i * 3 + 1] = (0.5 - v) * planeH;
-    targets[i * 3 + 2] = (Math.random() - 0.5) * 0.35 + (edge ? 0.07 : 0);
+    targets[i * 3 + 2] = (Math.random() - 0.5) * 0.1 + (edge ? 0.05 : 0.02);
 
     // Roof first (small v), edges before fills, slight jitter.
     delays[i] = Math.min(
       0.6,
       v * 0.38 + (edge ? 0 : 0.14) + Math.random() * 0.07
     );
-    sizes[i] = edge ? 9 + Math.random() * 7 : 6 + Math.random() * 5;
+    sizes[i] = edge ? 7 + Math.random() * 4 : 5 + Math.random() * 3;
     glyphs[i] = Math.floor(Math.random() * 16);
-    accents[i] = (edge ? Math.random() < 0.28 : Math.random() < 0.05) ? 1 : 0;
+    accents[i] = (edge ? Math.random() < 0.22 : Math.random() < 0.04) ? 1 : 0;
+    lums[i] = lumAt(x, y);
   }
 
-  return { count: n, starts, targets, delays, sizes, glyphs, accents };
+  return { count: n, starts, targets, delays, sizes, glyphs, accents, lums };
 }

@@ -37,7 +37,7 @@ export default function BuildingScene({ imageUrl, progressRef, onReady }: Props)
     const lowPower =
       typeof navigator !== "undefined" &&
       (navigator.hardwareConcurrency ?? 8) < 6;
-    sampleBuilding(imageUrl, lowPower ? 3200 : 6500, PLANE_W, PLANE_W * (1350 / 3240))
+    sampleBuilding(imageUrl, lowPower ? 4200 : 9000, PLANE_W, PLANE_W * (1350 / 3240))
       .then((s) => {
         if (!cancelled) setSample(s);
       })

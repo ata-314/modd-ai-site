@@ -3,6 +3,8 @@ import Header from "@/components/layout/Header";
 import Hero from "@/components/sections/Hero";
 import Showreel from "@/components/sections/Showreel";
 import Manifesto from "@/components/sections/Manifesto";
+import BeforeAfter from "@/components/sections/BeforeAfter";
+import Pipeline from "@/components/sections/Pipeline";
 import Services from "@/components/sections/Services";
 import SelectedWork from "@/components/sections/SelectedWork";
 import Process from "@/components/sections/Process";
@@ -19,6 +21,8 @@ export default function Home() {
         <Showreel />
         <Manifesto />
         <Services />
+        <BeforeAfter />
+        <Pipeline />
         <SelectedWork />
         <Process />
         <Philosophy />

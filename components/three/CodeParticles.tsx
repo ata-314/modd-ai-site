@@ -12,6 +12,7 @@ const vertexShader = /* glsl */ `
   attribute float aSize;
   attribute float aGlyph;
   attribute float aAccent;
+  attribute float aLum;
   uniform float uProgress;
   uniform float uTime;
   uniform vec3 uMouse;
@@ -19,6 +20,7 @@ const vertexShader = /* glsl */ `
   varying float vGlyph;
   varying float vAccent;
   varying float vAlpha;
+  varying float vLum;
 
   float easeOutCubic(float t) { return 1.0 - pow(1.0 - t, 3.0); }
 
@@ -43,6 +45,7 @@ const vertexShader = /* glsl */ `
 
     vGlyph = aGlyph;
     vAccent = aAccent;
+    vLum = aLum;
     // Faint glyph field is present even before scroll starts.
     float appear = 0.16 + 0.84 * smoothstep(0.0, 0.06, uProgress);
     float settle = mix(0.4, 0.95, t);
@@ -56,15 +59,18 @@ const fragmentShader = /* glsl */ `
   varying float vGlyph;
   varying float vAccent;
   varying float vAlpha;
+  varying float vLum;
 
   void main() {
     vec2 cell = vec2(mod(vGlyph, 4.0), floor(vGlyph / 4.0));
     vec2 uv = (cell + gl_PointCoord) / 4.0;
     float a = texture2D(uAtlas, uv).a;
     if (a * vAlpha < 0.02) discard;
-    vec3 gray = vec3(0.62, 0.66, 0.70);
+    // Glyph brightness follows the facade pixel it represents — the
+    // characters collectively render the building like ASCII art.
+    vec3 shade = mix(vec3(0.22, 0.25, 0.28), vec3(0.88, 0.92, 0.95), vLum);
     vec3 lime = vec3(0.772, 1.0, 0.129);
-    vec3 col = mix(gray, lime, vAccent);
+    vec3 col = mix(shade, lime, vAccent);
     gl_FragColor = vec4(col, a * vAlpha);
   }
 `;
@@ -86,6 +92,7 @@ export default function CodeParticles({ sample, progressRef, mouseRef }: Props) 
     geo.setAttribute("aSize", new THREE.BufferAttribute(sample.sizes, 1));
     geo.setAttribute("aGlyph", new THREE.BufferAttribute(sample.glyphs, 1));
     geo.setAttribute("aAccent", new THREE.BufferAttribute(sample.accents, 1));
+    geo.setAttribute("aLum", new THREE.BufferAttribute(sample.lums, 1));
 
     const mat = new THREE.ShaderMaterial({
       vertexShader,
