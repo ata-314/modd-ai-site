@@ -1,3 +1,4 @@
+// SECTION 07 — SELECTED WORK: project/case grid. Items: data/projects.ts
 "use client";
 
 import { useRef } from "react";

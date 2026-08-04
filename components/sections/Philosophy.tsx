@@ -1,3 +1,4 @@
+// SECTION 09 — PHILOSOPHY: HUMAN × MACHINE diagram. Texts: data/siteContent.ts → philosophy
 import TextReveal from "@/animations/TextReveal";
 import { siteContent } from "@/data/siteContent";
 

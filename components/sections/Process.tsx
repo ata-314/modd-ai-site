@@ -1,3 +1,4 @@
+// SECTION 08 — PROCESS: numbered working-method steps. Items: data/process.ts
 "use client";
 
 import { useEffect, useRef, useState } from "react";

@@ -1,3 +1,4 @@
+// SECTION 01 — HERO: full-screen intro (boot loader, code sea, WebGL building, headline, CTAs, marquee). Texts: data/siteContent.ts → hero
 "use client";
 
 import dynamic from "next/dynamic";

@@ -1,3 +1,4 @@
+// SECTION 06 — PIPELINE: how work flows through the studio. Stages: data/transformations.ts → pipelineStages
 import TextReveal from "@/animations/TextReveal";
 import { pipelineStages } from "@/data/transformations";
 

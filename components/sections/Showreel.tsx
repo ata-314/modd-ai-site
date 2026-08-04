@@ -1,3 +1,4 @@
+// SECTION 02 — SHOWREEL: growing video frame (placeholder until real reel). Config: data/siteContent.ts → showreel
 "use client";
 
 import { useEffect, useRef, useState } from "react";

@@ -1,3 +1,4 @@
+// SECTION 10 — CTA: closing call-to-action line + button. Texts: data/siteContent.ts → cta
 import TextReveal from "@/animations/TextReveal";
 import { siteContent } from "@/data/siteContent";
 

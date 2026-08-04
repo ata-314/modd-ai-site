@@ -1,3 +1,4 @@
+// PAGE PART — Fixed top navigation bar (logo + menu links). Nav labels: data/siteContent.ts → footer.nav anchors.
 "use client";
 
 import { siteContent } from "@/data/siteContent";

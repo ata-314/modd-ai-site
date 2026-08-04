@@ -1,3 +1,4 @@
+// SECTION 04 — SERVICES: expandable service list (accordion). Items: data/services.ts
 "use client";
 
 import { useState } from "react";

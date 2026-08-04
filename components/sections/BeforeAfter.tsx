@@ -1,3 +1,4 @@
+// SECTION 05 — BEFORE/AFTER: transformation slider examples. Items: data/transformations.ts
 "use client";
 
 import { useState } from "react";

@@ -1,3 +1,4 @@
+// PAGE PART — FOOTER: nav, contact, social links. Texts: data/siteContent.ts → footer
 import { siteContent } from "@/data/siteContent";
 
 export default function Footer() {

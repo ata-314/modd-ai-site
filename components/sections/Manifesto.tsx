@@ -1,3 +1,4 @@
+// SECTION 03 — MANIFESTO: big statement text block. Texts: data/siteContent.ts → manifesto
 import TextReveal from "@/animations/TextReveal";
 import { siteContent } from "@/data/siteContent";
 
