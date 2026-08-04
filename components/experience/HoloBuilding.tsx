@@ -71,22 +71,24 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
   const gltf = useLoader(GLTFLoader, MODEL_URL);
   const facade = useLoader(THREE.TextureLoader, FACADE_URL);
   const groupRef = useRef<THREE.Group>(null);
+  const matRef = useRef<THREE.ShaderMaterial | null>(null);
   const pRef = useRef(0);
 
   const { geometry, material, scale, center } = useMemo(() => {
-    facade.flipY = false; // glTF UV convention
-    facade.colorSpace = THREE.SRGBColorSpace;
-    facade.needsUpdate = true;
+    // clone so the hook-owned texture object is never mutated
+    const tex = facade.clone();
+    tex.flipY = false; // glTF UV convention
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
 
-    let geo: THREE.BufferGeometry | null = null;
-    gltf.scene.updateMatrixWorld(true);
+    let found: THREE.BufferGeometry | null = null;
     gltf.scene.traverse((o) => {
       const mesh = o as THREE.Mesh;
-      if (!geo && mesh.isMesh) geo = mesh.geometry as THREE.BufferGeometry;
+      if (!found && mesh.isMesh) found = mesh.geometry as THREE.BufferGeometry;
     });
-    if (!geo) throw new Error("model has no meshes");
-    const g = geo as THREE.BufferGeometry;
-    g.computeBoundingBox();
+    if (!found) throw new Error("model has no meshes");
+    const g = found as THREE.BufferGeometry;
+    if (!g.boundingBox) g.computeBoundingBox();
     const box = g.boundingBox!;
     const size = box.getSize(new THREE.Vector3());
     const c = box.getCenter(new THREE.Vector3());
@@ -99,7 +101,7 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
       depthWrite: false,
       side: THREE.FrontSide,
       uniforms: {
-        uMap: { value: facade },
+        uMap: { value: tex },
         uTime: { value: 0 },
         uOp: { value: 0 },
       },
@@ -109,13 +111,16 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
 
   useEffect(() => {
     return () => {
-      material.dispose();
+      const mat = matRef.current;
+      (mat?.uniforms.uMap.value as THREE.Texture)?.dispose();
+      mat?.dispose();
     };
-  }, [material]);
+  }, []);
 
   useFrame((state, delta) => {
     const group = groupRef.current;
-    if (!group) return;
+    const mat = matRef.current;
+    if (!group || !mat) return;
     const p = THREE.MathUtils.damp(pRef.current, experience.hero, 5, delta);
     pRef.current = p;
     const w = phaseWeights(p);
@@ -125,8 +130,8 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
     const fadeOut = 1 - THREE.MathUtils.smoothstep(p, PHASES.holdEnd, PHASES.dissolveEnd - 0.02);
     const op = formIn * fadeOut;
 
-    material.uniforms.uTime.value = state.clock.elapsedTime;
-    material.uniforms.uOp.value = op;
+    mat.uniforms.uTime.value = state.clock.elapsedTime;
+    mat.uniforms.uOp.value = op;
     group.visible = op > 0.01;
     group.rotation.y = w.spin;
     const breathe = 1 + Math.sin(state.clock.elapsedTime * 0.6) * 0.004;
@@ -139,6 +144,9 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
         geometry={geometry}
         material={material}
         position={[-center.x, -center.y, -center.z]}
+        ref={(m) => {
+          if (m) matRef.current = m.material as THREE.ShaderMaterial;
+        }}
       />
     </group>
   );
