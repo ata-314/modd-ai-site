@@ -5,7 +5,7 @@ import { useFrame, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { experience } from "./state";
-import { PHASES, phaseWeights } from "./phases";
+import { phaseWeights, BUILDING_BASE_YAW } from "./phases";
 
 // The real building, rendered as a hologram: the actual GLB mesh with the
 // real facade texture, tinted to the brand's green, fresnel rim glow on the
@@ -53,16 +53,17 @@ const fragmentShader = /* glsl */ `
     // fresnel silhouette glow
     float fres = pow(1.0 - clamp(dot(vNormal, vViewDir), 0.0, 1.0), 2.4);
 
-    // sweeping scanlines + slow tall sweep + faint flicker
-    float scan = 0.82 + 0.18 * sin(vWorldY * 26.0 - uTime * 2.2);
+    // sweeping scanlines + slow tall sweep + faint flicker — kept gentle so
+    // the architecture and signage stay the star
+    float scan = 0.9 + 0.1 * sin(vWorldY * 26.0 - uTime * 2.2);
     float sweep = smoothstep(0.25, 0.0, abs(fract(vWorldY * 0.08 - uTime * 0.05) - 0.5));
-    float flicker = 0.96 + 0.04 * sin(uTime * 19.0 + vWorldY * 4.0);
+    float flicker = 0.97 + 0.03 * sin(uTime * 19.0 + vWorldY * 4.0);
 
-    vec3 col = tinted * (0.55 + 0.45 * lum) * scan * flicker;
-    col += lime * fres * 0.9;
-    col += lime * sweep * 0.10;
+    vec3 col = tinted * (0.62 + 0.5 * lum) * scan * flicker;
+    col += lime * fres * 0.68;
+    col += lime * sweep * 0.08;
 
-    float alpha = uOp * (0.34 + 0.5 * fres + 0.22 * lum) * flicker;
+    float alpha = uOp * (0.42 + 0.46 * fres + 0.3 * lum) * flicker;
     gl_FragColor = vec4(col, alpha);
   }
 `;
@@ -72,9 +73,10 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
   const facade = useLoader(THREE.TextureLoader, FACADE_URL);
   const groupRef = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.ShaderMaterial | null>(null);
+  const lineRef = useRef<THREE.LineBasicMaterial | null>(null);
   const pRef = useRef(0);
 
-  const { geometry, material, scale, center } = useMemo(() => {
+  const { geometry, material, edges, lineMat, scale, center } = useMemo(() => {
     // clone so the hook-owned texture object is never mutated
     const tex = facade.clone();
     tex.flipY = false; // glTF UV convention
@@ -106,7 +108,17 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
         uOp: { value: 0 },
       },
     });
-    return { geometry: g, material: mat, scale: s, center: c };
+
+    // architectural line work — the hologram's wireframe skeleton
+    const edges = new THREE.EdgesGeometry(g, 24);
+    const lineMat = new THREE.LineBasicMaterial({
+      color: 0xc5ff21,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    return { geometry: g, material: mat, edges, lineMat, scale: s, center: c };
   }, [gltf, facade, planeW]);
 
   useEffect(() => {
@@ -114,6 +126,7 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
       const mat = matRef.current;
       (mat?.uniforms.uMap.value as THREE.Texture)?.dispose();
       mat?.dispose();
+      lineRef.current?.dispose();
     };
   }, []);
 
@@ -125,15 +138,18 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
     pRef.current = p;
     const w = phaseWeights(p);
 
-    // materialize during the build phase, fade out through the dissolve
-    const formIn = THREE.MathUtils.smoothstep(p, 0.3, 0.5);
-    const fadeOut = 1 - THREE.MathUtils.smoothstep(p, PHASES.holdEnd, PHASES.dissolveEnd - 0.02);
+    // materialize as the codes gather, stay while the headline + CTAs are
+    // on stage, fade only deep into the galaxy dissolve
+    const formIn = THREE.MathUtils.smoothstep(p, 0.26, 0.44);
+    const fadeOut = 1 - THREE.MathUtils.smoothstep(p, 0.66, 0.85);
     const op = formIn * fadeOut;
 
     mat.uniforms.uTime.value = state.clock.elapsedTime;
     mat.uniforms.uOp.value = op;
+    if (lineRef.current) lineRef.current.opacity = op * 0.2;
     group.visible = op > 0.01;
-    group.rotation.y = w.spin;
+    // corner-on resting pose (photo composition) + dissolve rotation
+    group.rotation.y = BUILDING_BASE_YAW + w.spin * 0.8;
     const breathe = 1 + Math.sin(state.clock.elapsedTime * 0.6) * 0.004;
     group.scale.set(scale * breathe, scale * breathe, scale * DEPTH_SQUASH * breathe);
   });
@@ -146,6 +162,14 @@ export default function HoloBuilding({ planeW }: { planeW: number }) {
         position={[-center.x, -center.y, -center.z]}
         ref={(m) => {
           if (m) matRef.current = m.material as THREE.ShaderMaterial;
+        }}
+      />
+      <lineSegments
+        geometry={edges}
+        material={lineMat}
+        position={[-center.x, -center.y, -center.z]}
+        ref={(l) => {
+          if (l) lineRef.current = l.material as THREE.LineBasicMaterial;
         }}
       />
     </group>

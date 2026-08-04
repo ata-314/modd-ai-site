@@ -20,6 +20,9 @@ export const PHASES = {
 /** Hero pinned scroll distance (vh). Raising this stretches every phase. */
 export const HERO_SCROLL_VH = 460;
 
+/** Resting yaw: the building faces the camera corner-on, like the photo. */
+export const BUILDING_BASE_YAW = 0.62;
+
 const smoothstep = (a: number, b: number, x: number) => {
   const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
   return t * t * (3 - 2 * t);

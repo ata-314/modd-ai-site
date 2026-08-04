@@ -6,7 +6,7 @@ import * as THREE from "three";
 import type { BuildingSample } from "@/components/three/sampleBuilding";
 import { createGlyphAtlas, ATLAS_GRID, GLYPH_COUNT } from "@/components/three/glyphAtlas";
 import { experience, markExperienceReady } from "./state";
-import { PHASES, phaseWeights } from "./phases";
+import { PHASES, phaseWeights, BUILDING_BASE_YAW } from "./phases";
 import type { QualityProfile } from "./quality";
 
 // One particle system, three deterministic position sets. Every particle owns
@@ -428,7 +428,8 @@ export default function MorphField({ sample, quality }: Props) {
     const w = phaseWeights(p);
     seaOffRef.current += w.flow * 6.2 * delta;
     u.uSeaOff.value = seaOffRef.current;
-    u.uSpin.value = w.spin;
+    // corner-on resting pose (photo composition) + dissolve rotation
+    u.uSpin.value = BUILDING_BASE_YAW + w.spin * 0.8;
     u.uDoc.value = THREE.MathUtils.damp(u.uDoc.value, experience.doc, 4, delta);
     // Dim the field under readable content once the galaxy takes over.
     const dimTarget = 1 - 0.5 * THREE.MathUtils.smoothstep(p, 0.85, 1);
