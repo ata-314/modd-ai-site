@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { sampleBuilding, type BuildingSample } from "@/components/three/sampleBuilding";
@@ -10,6 +10,7 @@ import { detectQuality, type QualityProfile } from "./quality";
 import { experience } from "./state";
 import { PHASES } from "./phases";
 import MorphField, { BUILDING_PLANE_W } from "./MorphField";
+import HoloBuilding from "./HoloBuilding";
 
 // The single global WebGL surface. Fixed behind all content; the hero's
 // scroll drives the sea → building → galaxy morph, the document scroll keeps
@@ -170,6 +171,12 @@ export default function ExperienceCanvas({ onFail }: { onFail: () => void }) {
         }}
       >
         {sample && <MorphField sample={sample} quality={quality} />}
+        {/* the real model as a legible hologram — signage must read */}
+        {sample?.dims && (
+          <Suspense fallback={null}>
+            <HoloBuilding planeW={BUILDING_PLANE_W} />
+          </Suspense>
+        )}
         <Rig quality={quality} dims={sample?.dims ?? null} />
       </Canvas>
     </div>

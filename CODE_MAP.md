@@ -38,7 +38,10 @@ scroll. The sea phase is a ridged Matrix-glyph terrain: mountain ranges flank
 a flat data-corridor, streaming toward the viewer, ridgelines glowing accent.
 The galaxy pours downward as the page scrolls and condenses into a wrinkled
 two-hemisphere brain at ~50–78% of the page, fully reversible. The building
-is built entirely from code glyphs in three architectural layers sampled
+is the real GLB rendered as a legible hologram (`HoloBuilding.tsx` — lightly
+cooled facade texture so the MODD signage reads, fresnel rim, gentle
+scanlines, wireframe skeleton) wrapped in code glyphs in three architectural
+layers sampled
 from the real GLB (`public/models/building.glb` + `facade.jpg` luminance):
 bright dense glyphs along EdgesGeometry structure lines, dimmer off-white/
 pale-green fill on the facades, sparse rising particles inside the volume.
