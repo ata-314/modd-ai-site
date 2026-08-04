@@ -14,10 +14,11 @@ import type { QualityProfile } from "./quality";
 // between them from a single scroll progress uniform. No per-frame attribute
 // writes, no React state — geometry is built once, uniforms are mutated.
 
-const BUILDING_PLANE_W = 6.6;
+const BUILDING_PLANE_W = 7.4;
 
 const vertexShader = /* glsl */ `
   attribute vec3 aSea;      // x: -1..1 slot, y: seed, z: depth offset
+  attribute vec3 aStart;    // loose gather cloud around the building
   attribute vec3 aBuild;
   attribute vec3 aGalaxy;
   attribute vec3 aBrain;
@@ -60,32 +61,39 @@ const vertexShader = /* glsl */ `
     float depthFrac = zLin / DEPTH;               // 0 near → 1 far
     vec3 sea;
     sea.z = 6.0 - zLin;
-    sea.x = aSea.x * mix(10.0, 38.0, depthFrac);
+    sea.x = aSea.x * mix(8.0, 34.0, depthFrac);
     float ridge1 = 1.0 - abs(sin(sea.x * 0.16 + sea.z * 0.075));
     float ridge2 = 1.0 - abs(sin(sea.x * 0.055 - sea.z * 0.05 + 2.7));
     float detail = sin(sea.x * 0.6 + sea.z * 0.35 + aSea.y * 6.283) * 0.14;
-    float corridor = smoothstep(1.6, 8.5, abs(sea.x));   // keep center open
-    float h = (ridge1 * 1.5 + ridge2 * 2.6 + detail) * corridor
-            * (0.45 + depthFrac * 1.15);
+    float corridor = smoothstep(1.2, 5.0, abs(sea.x));   // keep center open
+    float h = (ridge1 * 1.3 + ridge2 * 2.2 + detail) * corridor
+            * (0.75 + depthFrac * 0.9);
     // valley floor: shallow flowing data-swell
     h += sin(sea.x * 0.8 - uTime * 0.5) * 0.07
        + sin(sea.z * 0.5 - uTime * 0.75) * 0.11;
-    sea.y = -2.45 + h;
-    float crest = smoothstep(1.5, 2.9, h);        // ridgelines + peaks glow
+    sea.y = -2.3 + h;
+    float crest = smoothstep(1.1, 2.4, h);        // ridgelines + peaks glow
 
-    // ---- Building: staggered formation, rigid spin, hold depth ---------
-    float bStart = ${PHASES.buildStart.toFixed(3)} + aDelay * 0.45;
-    float tB = clamp((uP - bStart) * 6.0, 0.0, 1.0);
-    tB = 1.0 - pow(1.0 - tB, 3.0);
-    float dis = smoothstep(${PHASES.holdEnd.toFixed(3)} + aDelay * 0.15, ${PHASES.dissolveEnd.toFixed(3)}, uP);
-    float wB = tB * (1.0 - dis);
+    // ---- Building: gather, then lock ------------------------------------
+    // Two stages: terrain codes first drift into a loose cloud around the
+    // building (aStart), then lock onto the facade. Mixing straight from
+    // the huge sea coordinates would smear the building even at 95%
+    // formed, so the final lock happens from the nearby cloud only.
+    float toGather = smoothstep(0.10, 0.32, uP);
+    float t2 = clamp((uP - 0.28 - aDelay * 0.2) * 7.0, 0.0, 1.0);
+    t2 = 1.0 - pow(1.0 - t2, 3.0);
+    float dis = smoothstep(${PHASES.holdEnd.toFixed(3)} + aDelay * 0.10, ${PHASES.dissolveEnd.toFixed(3)}, uP);
+    float wB = t2 * (1.0 - dis);
     float wG = smoothstep(${PHASES.holdEnd.toFixed(3)} + aDelay * 0.18, ${(PHASES.dissolveEnd + 0.05).toFixed(3)}, uP);
+    vec3 gather = aStart;
+    gather.x += sin(uTime * 0.5 + aSeed * 6.283) * 0.25;
+    gather.y += cos(uTime * 0.45 + aSeed * 9.4) * 0.2;
 
     float ca = cos(uSpin);
     float sa = sin(uSpin);
     vec3 b = aBuild;
     b = vec3(b.x * ca + b.z * sa, b.y, -b.x * sa + b.z * ca);
-    b.z += (aSeed - 0.5) * 0.5 * smoothstep(${PHASES.buildEnd.toFixed(3)}, ${PHASES.holdEnd.toFixed(3)}, uP);
+    b.z += (aSeed - 0.5) * 0.25 * smoothstep(${PHASES.buildEnd.toFixed(3)}, ${PHASES.holdEnd.toFixed(3)}, uP);
 
     // ---- Galaxy: tilted spiral, breathing swirl, scroll drift ----------
     vec3 g = aGalaxy;
@@ -103,7 +111,7 @@ const vertexShader = /* glsl */ `
     g.yz = vec2(g.y * tc - g.z * ts, g.y * ts + g.z * tc);
     // the whole form streams downward as the page scrolls — each particle
     // falls at its own rate, so the spiral pours rather than translates
-    g.y -= uDoc * (2.3 + aSeed * 1.8);
+    g.y -= uDoc * (1.6 + aSeed * 0.9);
 
     // ---- Brain: the galaxy condenses into a mind deep in the page ------
     float wBr = smoothstep(0.50, 0.78, uDoc) * wG;
@@ -116,7 +124,8 @@ const vertexShader = /* glsl */ `
     br.y += sin(uTime * 0.5 + aSeed * 9.42) * 0.05;
 
     // ---- Blend ---------------------------------------------------------
-    vec3 pos = mix(sea, b, wB);
+    vec3 pos = mix(sea, gather, toGather);
+    pos = mix(pos, b, wB);
     pos = mix(pos, g, wG);
     pos = mix(pos, br, wBr);
 
@@ -137,13 +146,18 @@ const vertexShader = /* glsl */ `
 
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = aSize * uPR * (9.5 / max(-mv.z, 0.5));
+    // sea glyphs render much larger so the terrain reads at rest; the
+    // building keeps tighter glyphs, the galaxy sits in between
+    float formed = clamp(wB + wG + wBr, 0.0, 1.0);
+    float sizeBoost = mix(1.7, 1.0, formed) + 0.3 * max(wG, wBr);
+    gl_PointSize = aSize * sizeBoost * uPR * (12.5 / max(-mv.z, 0.5));
 
     // ---- Alpha ---------------------------------------------------------
-    float fogA = 1.0 - depthFrac * 0.86;                       // depth fog
+    float fogA = 1.0 - depthFrac * 0.62;                       // depth fog
     float nearFade = smoothstep(6.0, 3.2, sea.z);
-    float seaA = (0.36 + crest * 0.28) * fogA * max(nearFade, wB + wG);
-    float a = mix(seaA, 0.9, wB);
+    float seaA = (0.55 + crest * 0.3) * fogA * max(nearFade, toGather);
+    float a = mix(seaA, 0.5, toGather * 0.85);
+    a = mix(a, 0.85, wB);
     a = mix(a, 0.55, wG);
     a = mix(a, 0.62, wBr);
     a += smoothstep(1.35, 0.0, md) * 0.25;                     // pointer glow
@@ -194,8 +208,8 @@ const fragmentShader = /* glsl */ `
 
     vec3 lime = vec3(0.772, 1.0, 0.129);
 
-    // sea: muted gray, ridgelines + scattered neon spark accent
-    vec3 seaCol = mix(vec3(0.42, 0.45, 0.48), lime, max(vCrest * 0.9, step(vSeed, 0.07)));
+    // sea: cool teal-gray, ridgelines + scattered neon spark accent
+    vec3 seaCol = mix(vec3(0.40, 0.52, 0.47), lime, max(vCrest * 0.9, step(vSeed, 0.07)));
     // building: luminance-shaded facade; accent only on selected edges
     vec3 shade = mix(vec3(0.16, 0.18, 0.20), vec3(0.85, 0.90, 0.93), vLum);
     float bAccent = vEdge * step(vSeed, 0.12);
@@ -234,6 +248,7 @@ export default function MorphField({ sample, quality }: Props) {
   const { geometry, material } = useMemo(() => {
     const n = quality.particleCount;
     const seas = new Float32Array(n * 3);
+    const startsArr = new Float32Array(n * 3);
     const builds = new Float32Array(n * 3);
     const galaxies = new Float32Array(n * 3);
     const brains = new Float32Array(n * 3);
@@ -259,6 +274,9 @@ export default function MorphField({ sample, quality }: Props) {
       builds[i * 3] = sample.targets[s * 3];
       builds[i * 3 + 1] = sample.targets[s * 3 + 1];
       builds[i * 3 + 2] = sample.targets[s * 3 + 2];
+      startsArr[i * 3] = sample.starts[s * 3];
+      startsArr[i * 3 + 1] = sample.starts[s * 3 + 1];
+      startsArr[i * 3 + 2] = sample.starts[s * 3 + 2];
       delays[i] = sample.delays[s];
       edges[i] = sample.accents[s] > 0 || sample.sizes[s] > 7 ? 1 : 0;
       lums[i] = sample.lums[s];
@@ -312,6 +330,7 @@ export default function MorphField({ sample, quality }: Props) {
     // `position` is required by three but unused — sea is derived in-shader.
     geo.setAttribute("position", new THREE.BufferAttribute(seas, 3));
     geo.setAttribute("aSea", new THREE.BufferAttribute(seas, 3));
+    geo.setAttribute("aStart", new THREE.BufferAttribute(startsArr, 3));
     geo.setAttribute("aBuild", new THREE.BufferAttribute(builds, 3));
     geo.setAttribute("aGalaxy", new THREE.BufferAttribute(galaxies, 3));
     geo.setAttribute("aBrain", new THREE.BufferAttribute(brains, 3));

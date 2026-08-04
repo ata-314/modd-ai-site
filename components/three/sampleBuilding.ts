@@ -86,20 +86,27 @@ export async function sampleBuilding(
     starts[i * 3 + 1] = (Math.random() - 0.5) * planeH * 2.6;
     starts[i * 3 + 2] = (Math.random() - 0.5) * 3.2;
 
-    // Snap close to the facade surface — the glyphs ARE the building.
+    // Luminance with stretched contrast so signage and windows read.
+    const rawLum = lumAt(x, y);
+    const lum = Math.min(1, Math.max(0, (rawLum - 0.5) * 1.35 + 0.5));
+    const bright = lum > 0.72; // signage / lit surfaces
+
+    // The glyphs ARE the building. Depth is a luminance bas-relief: bright
+    // surfaces push forward, dark windows recede — rotation reads as 3D.
     targets[i * 3] = (u - 0.5) * planeW;
     targets[i * 3 + 1] = (0.5 - v) * planeH;
-    targets[i * 3 + 2] = (Math.random() - 0.5) * 0.1 + (edge ? 0.05 : 0.02);
+    targets[i * 3 + 2] =
+      (lum - 0.45) * 0.55 + (edge ? 0.06 : 0) + (Math.random() - 0.5) * 0.05;
 
-    // Roof first (small v), edges before fills, slight jitter.
+    // Roof first, edges + signage before fills, slight jitter.
     delays[i] = Math.min(
       0.6,
-      v * 0.38 + (edge ? 0 : 0.14) + Math.random() * 0.07
+      v * 0.38 + (edge || bright ? 0 : 0.14) + Math.random() * 0.07
     );
-    sizes[i] = edge ? 7 + Math.random() * 4 : 5 + Math.random() * 3;
+    sizes[i] = edge || bright ? 7 + Math.random() * 4 : 5 + Math.random() * 3;
     glyphs[i] = Math.floor(Math.random() * 16);
     accents[i] = (edge ? Math.random() < 0.22 : Math.random() < 0.04) ? 1 : 0;
-    lums[i] = lumAt(x, y);
+    lums[i] = lum;
   }
 
   return { count: n, starts, targets, delays, sizes, glyphs, accents, lums };

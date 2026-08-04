@@ -126,52 +126,80 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
   const normalMatrix = new THREE.Matrix3();
   const light = new THREE.Vector3(0.5, 0.85, 0.6).normalize();
 
+  // Barycentric UV holders — set inside the retry loop below.
+  let uvA = 0;
+  let uvB = 0;
+  let uvC = 0;
+  let uvW = { i0: 0, i1: 0, i2: 0, tm: tris[0] };
+
   for (let i = 0; i < n; i++) {
-    // pick a mesh by area share, then a triangle, then a barycentric point
-    let meshPick = Math.random() * totalArea;
-    let tm = tris[0];
-    for (const t of tris) {
-      meshPick -= t.totalArea;
-      if (meshPick <= 0) {
-        tm = t;
-        break;
+    // Rejection-sample the front of the building: back-facing surfaces
+    // (they'd project on top of the facade and turn it to mush) and the
+    // flat ground the generator adds under the model are both skipped.
+    let tries = 0;
+    let nyTmp = 0;
+    for (;;) {
+      let meshPick = Math.random() * totalArea;
+      let tm = tris[0];
+      for (const t of tris) {
+        meshPick -= t.totalArea;
+        if (meshPick <= 0) {
+          tm = t;
+          break;
+        }
       }
-    }
-    const t = pickTriangle(tm.cumArea, Math.random());
-    const i0 = tm.index ? tm.index[t * 3] : t * 3;
-    const i1 = tm.index ? tm.index[t * 3 + 1] : t * 3 + 1;
-    const i2 = tm.index ? tm.index[t * 3 + 2] : t * 3 + 2;
-    let bu = Math.random();
-    let bv = Math.random();
-    if (bu + bv > 1) {
-      bu = 1 - bu;
-      bv = 1 - bv;
-    }
-    const bw = 1 - bu - bv;
+      const t = pickTriangle(tm.cumArea, Math.random());
+      const i0 = tm.index ? tm.index[t * 3] : t * 3;
+      const i1 = tm.index ? tm.index[t * 3 + 1] : t * 3 + 1;
+      const i2 = tm.index ? tm.index[t * 3 + 2] : t * 3 + 2;
+      let bu = Math.random();
+      let bv = Math.random();
+      if (bu + bv > 1) {
+        bu = 1 - bu;
+        bv = 1 - bv;
+      }
+      const bw = 1 - bu - bv;
 
-    v0.fromArray(tm.pos, i0 * 3);
-    v1.fromArray(tm.pos, i1 * 3);
-    v2.fromArray(tm.pos, i2 * 3);
-    p.set(
-      v0.x * bw + v1.x * bu + v2.x * bv,
-      v0.y * bw + v1.y * bu + v2.y * bv,
-      v0.z * bw + v1.z * bu + v2.z * bv
-    ).applyMatrix4(tm.matrix);
-
-    if (tm.nor) {
-      v0.fromArray(tm.nor, i0 * 3);
-      v1.fromArray(tm.nor, i1 * 3);
-      v2.fromArray(tm.nor, i2 * 3);
-      nrm.set(
+      v0.fromArray(tm.pos, i0 * 3);
+      v1.fromArray(tm.pos, i1 * 3);
+      v2.fromArray(tm.pos, i2 * 3);
+      p.set(
         v0.x * bw + v1.x * bu + v2.x * bv,
         v0.y * bw + v1.y * bu + v2.y * bv,
         v0.z * bw + v1.z * bu + v2.z * bv
-      );
-      normalMatrix.getNormalMatrix(tm.matrix);
-      nrm.applyMatrix3(normalMatrix).normalize();
-    } else {
-      nrm.set(0, 0, 1);
+      ).applyMatrix4(tm.matrix);
+
+      if (tm.nor) {
+        v0.fromArray(tm.nor, i0 * 3);
+        v1.fromArray(tm.nor, i1 * 3);
+        v2.fromArray(tm.nor, i2 * 3);
+        nrm.set(
+          v0.x * bw + v1.x * bu + v2.x * bv,
+          v0.y * bw + v1.y * bu + v2.y * bv,
+          v0.z * bw + v1.z * bu + v2.z * bv
+        );
+        normalMatrix.getNormalMatrix(tm.matrix);
+        nrm.applyMatrix3(normalMatrix).normalize();
+      } else {
+        nrm.set(0, 0, 1);
+      }
+
+      nyTmp = (p.y - box.min.y) / Math.max(size.y, 1e-6);
+      const backFacing = nrm.z < -0.2;
+      const groundPlane = nrm.y > 0.7 && nyTmp < 0.06;
+      tries++;
+      if ((!backFacing && !groundPlane) || tries >= 10) {
+        uvA = bw;
+        uvB = bu;
+        uvC = bv;
+        uvW = { i0, i1, i2, tm };
+        break;
+      }
     }
+    const { i0, i1, i2, tm } = uvW;
+    const bw = uvA;
+    const bu = uvB;
+    const bv = uvC;
 
     // brightness from the real facade texture (glTF UV: v runs top-down)
     let lum: number;
@@ -190,14 +218,16 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
       lum = 0.22 + 0.78 * Math.max(nrm.dot(light), 0);
     }
 
-    const ny = (p.y - box.min.y) / Math.max(size.y, 1e-6);
+    const ny = nyTmp;
     const edge = Math.abs(nrm.y) > 0.6 || Math.random() < 0.14;
     // very bright texels (signage, lit windows) render larger + earlier
     const bright = lum > 0.72;
 
     targets[i * 3] = (p.x - center.x) * scale;
     targets[i * 3 + 1] = (p.y - center.y) * scale;
-    targets[i * 3 + 2] = (p.z - center.z) * scale;
+    // bas-relief: keep a hint of depth for the rotation, but flatten the
+    // model so the facade reads as one crisp silhouette from the front
+    targets[i * 3 + 2] = (p.z - center.z) * scale * 0.22;
 
     starts[i * 3] = (Math.random() - 0.5) * planeW * 1.7;
     starts[i * 3 + 1] = (Math.random() - 0.5) * planeW;

@@ -43,6 +43,6 @@ export function phaseWeights(p: number): PhaseWeights {
     (1 - smoothstep(PHASES.holdEnd, PHASES.dissolveEnd, p));
   const galaxy = smoothstep(PHASES.holdEnd, PHASES.dissolveEnd + 0.04, p);
   const flow = 0.18 + 0.82 * (1 - smoothstep(PHASES.seaFastEnd, PHASES.buildEnd, p));
-  const spin = smoothstep(PHASES.buildEnd, PHASES.dissolveEnd, p) * 2.4;
+  const spin = smoothstep(PHASES.buildEnd, PHASES.dissolveEnd, p) * 1.3;
   return { building, galaxy, flow, spin };
 }
