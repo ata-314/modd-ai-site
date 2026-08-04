@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { sampleBuilding, type BuildingSample } from "@/components/three/sampleBuilding";
+import { sampleModel } from "./sampleModel";
 import { siteContent } from "@/data/siteContent";
 import { detectQuality, type QualityProfile } from "./quality";
 import { experience } from "./state";
@@ -40,15 +41,19 @@ export default function ExperienceCanvas({ onFail }: { onFail: () => void }) {
   const [paused, setPaused] = useState(false);
   const lastScrollY = useRef(0);
 
-  // Offscreen building sampling — the image is data, never shown.
+  // Offscreen building sampling — assets are data, never shown. Prefers the
+  // real 3D model when present; falls back to the image silhouette.
   useEffect(() => {
     let cancelled = false;
-    sampleBuilding(
-      siteContent.hero.building.texture,
-      quality.buildingSamples,
-      BUILDING_PLANE_W,
-      BUILDING_PLANE_W * (1350 / 3240)
-    )
+    sampleModel("/models/building.glb", quality.buildingSamples, BUILDING_PLANE_W)
+      .catch(() =>
+        sampleBuilding(
+          siteContent.hero.building.texture,
+          quality.buildingSamples,
+          BUILDING_PLANE_W,
+          BUILDING_PLANE_W * (1350 / 3240)
+        )
+      )
       .then((s) => {
         if (!cancelled) setSample(s);
       })
