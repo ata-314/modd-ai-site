@@ -1,6 +1,8 @@
-// PAGE PART — Fixed top navigation bar (logo + menu links). Nav labels: data/siteContent.ts → footer.nav anchors.
+// PAGE PART — Fixed top navigation. Transparent over the hero, condenses
+// into a centered glass capsule as the page scrolls. Nav labels below.
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { siteContent } from "@/data/siteContent";
 
 const links = [
@@ -11,11 +13,30 @@ const links = [
 ];
 
 export default function Header() {
+  const [scrolled, setScrolled] = useState(false);
+  const ticking = useRef(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (ticking.current) return;
+      ticking.current = true;
+      requestAnimationFrame(() => {
+        setScrolled(window.scrollY > window.innerHeight * 0.4);
+        ticking.current = false;
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="fixed inset-x-0 top-0 z-40 mix-blend-difference">
+    <header className="fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-4">
       <nav
         aria-label="Main navigation"
-        className="flex items-center justify-between px-6 py-5 md:px-12"
+        className={`flex items-center gap-6 rounded-full px-6 transition-all duration-700 ease-out md:gap-10 ${
+          scrolled ? "glass py-3" : "w-full max-w-none justify-between bg-transparent py-4 md:px-8"
+        }`}
       >
         <a
           href="#top"

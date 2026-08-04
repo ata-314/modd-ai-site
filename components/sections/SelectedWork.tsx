@@ -30,7 +30,7 @@ function WorkCard({ project }: { project: Project }) {
         ref={ref}
         onPointerMove={onMove}
         onPointerLeave={onLeave}
-        className="brackets relative aspect-video w-full overflow-hidden bg-panel"
+        className="glass relative aspect-video w-full overflow-hidden"
       >
         <motion.div
           style={{ x: px, y: py }}

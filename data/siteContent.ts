@@ -9,9 +9,9 @@ export const siteContent = {
     ctaPrimary: { label: "Explore Our Work", href: "#work" },
     ctaSecondary: { label: "Start a Project", href: "#contact" },
     building: {
-      texture: "/building/bina.png",
-      fallback: "/building/bina.png",
-      fallbackMobile: "/building/bina-mobile.png",
+      // Offscreen sampling source only — the image itself is never rendered;
+      // the building is drawn entirely from code glyphs.
+      texture: "/building/bina.webp",
       alt: "MODD group building emerging as a digital structure made of code",
     },
     codeSnippets: [

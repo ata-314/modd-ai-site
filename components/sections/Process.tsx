@@ -87,7 +87,7 @@ export default function Process() {
               </li>
             ))}
           </ol>
-          <div className="flex flex-col justify-center">
+          <div className="glass flex flex-col justify-center p-8 md:p-10">
             <div className="h-px w-16 bg-accent" aria-hidden="true" />
             <p className="mt-6 max-w-md text-[length:var(--step-1)] leading-relaxed text-fg/90">
               {stage.description}

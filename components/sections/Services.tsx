@@ -14,12 +14,12 @@ export default function Services() {
       <p className="mb-14 font-mono text-[11px] uppercase tracking-[0.3em] text-muted">
         <span className="text-accent">/</span> Services
       </p>
-      <ul>
+      <ul className="space-y-4">
         {services.map((s) => {
           const isOpen = open === s.num;
           const isHover = hovered === s.num;
           return (
-            <li key={s.num} className="border-t border-line last:border-b">
+            <li key={s.num} className="glass overflow-hidden px-6 md:px-8">
               <div
                 className="relative"
                 onMouseEnter={() => setHovered(s.num)}
@@ -30,7 +30,7 @@ export default function Services() {
                   aria-expanded={isOpen}
                   aria-controls={`service-detail-${s.num}`}
                   onClick={() => setOpen(isOpen ? null : s.num)}
-                  className="group grid w-full grid-cols-[auto_1fr_auto] items-baseline gap-4 py-8 text-left transition-colors hover:bg-panel focus-visible:bg-panel md:grid-cols-[120px_1fr_minmax(0,320px)_auto] md:gap-8 md:py-10"
+                  className="group grid w-full grid-cols-[auto_1fr_auto] items-baseline gap-4 py-8 text-left transition-colors hover:bg-white/[0.03] focus-visible:bg-white/[0.03] md:grid-cols-[120px_1fr_minmax(0,320px)_auto] md:gap-8 md:py-10"
                 >
                   <span className="font-mono text-[length:var(--step-2)] font-medium text-accent">
                     {s.num}

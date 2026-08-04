@@ -8,6 +8,15 @@
   --accent: #c5ff21;
   --line: rgba(244, 243, 238, 0.09);
 
+  /* Glass material system (Apple-leaning, dark) */
+  --glass-bg: rgba(12, 13, 14, 0.55);
+  --glass-bg-strong: rgba(10, 11, 12, 0.68);
+  --glass-border: rgba(244, 243, 238, 0.09);
+  --glass-highlight: rgba(255, 255, 255, 0.07);
+  --glass-blur: 24px;
+  --glass-radius: 24px;
+  --glass-shadow: 0 24px 70px -30px rgba(0, 0, 0, 0.85);
+
   /* Fluid typography */
   --step--1: clamp(0.78rem, 0.74rem + 0.2vw, 0.875rem);
   --step-0: clamp(0.95rem, 0.9rem + 0.25vw, 1.1rem);
@@ -131,82 +140,70 @@ body {
   animation: blink 0.9s step-end infinite;
 }
 
-/* Futuristic custom cursor — mounted by components/ui/Cursor.tsx */
+/* Glass material — apply to cards, capsules and panels only (not walls of
+   text). Uses the token block in :root. */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    var(--glass-shadow);
+}
+.glass-strong {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  backdrop-filter: blur(32px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    var(--glass-shadow);
+}
+
+/* 3D cursor — mounted by components/ui/Cursor3D.tsx (fine pointers only) */
 .custom-cursor,
 .custom-cursor * {
   cursor: none !important;
 }
-.cursor-wrap {
+.cursor3d-root {
   position: fixed;
   inset: 0;
   z-index: 100;
   pointer-events: none;
+}
+.cursor3d-wrap {
+  position: fixed;
+  top: 0;
+  left: 0;
   opacity: 0;
   transition: opacity 0.25s ease;
-}
-.cursor-ring {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 36px;
-  height: 36px;
   will-change: transform;
-  transform-style: preserve-3d;
 }
-.cursor-ring-spin {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  border: 1px solid rgba(197, 255, 33, 0.7);
-  border-top-color: transparent;
-  border-bottom-color: rgba(197, 255, 33, 0.25);
-  box-shadow:
-    0 0 16px rgba(197, 255, 33, 0.28),
-    inset 0 0 10px rgba(197, 255, 33, 0.14);
-  animation: cursor-spin 3.2s linear infinite;
-}
-/* HUD corner brackets around the ring */
-.cursor-corners::before,
-.cursor-corners::after {
-  content: "";
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  border-color: rgba(197, 255, 33, 0.85);
-  border-style: solid;
-  transition: transform 0.25s ease;
-}
-.cursor-corners::before {
-  top: -5px;
-  left: -5px;
-  border-width: 1px 0 0 1px;
-}
-.cursor-corners::after {
-  bottom: -5px;
-  right: -5px;
-  border-width: 0 1px 1px 0;
-}
-.cursor-hover .cursor-corners::before {
-  transform: translate(-3px, -3px);
-}
-.cursor-hover .cursor-corners::after {
-  transform: translate(3px, 3px);
-}
-.cursor-dot {
+.cursor3d-dot {
   position: fixed;
   top: 0;
   left: 0;
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 9999px;
   background: var(--accent);
-  box-shadow: 0 0 10px rgba(197, 255, 33, 0.9);
+  box-shadow: 0 0 8px rgba(197, 255, 33, 0.7);
+  opacity: 0;
+  transition: opacity 0.25s ease;
   will-change: transform;
 }
-@keyframes cursor-spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* Reduced-motion / no-WebGL cursor: a calm static glass ring */
+.cursor3d-static {
+  position: absolute;
+  inset: 26px;
+  border-radius: 9999px;
+  border: 1px solid rgba(197, 255, 33, 0.6);
+  background: rgba(197, 255, 33, 0.05);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 /* Subtle film grain over the whole page */
@@ -234,8 +231,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .marquee-track,
-  .blink,
-  .cursor-ring-spin {
+  .blink {
     animation: none;
   }
   html {

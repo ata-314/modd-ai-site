@@ -1,5 +1,5 @@
 import SmoothScroll from "@/animations/SmoothScroll";
-import NeuralBackground from "@/components/three/NeuralBackground";
+import ExperienceRoot from "@/components/experience/ExperienceRoot";
 import Header from "@/components/layout/Header";
 import Hero from "@/components/sections/Hero";
 import Showreel from "@/components/sections/Showreel";
@@ -17,8 +17,8 @@ export default function Home() {
   return (
     <SmoothScroll>
       <Header />
-      {/* Scroll-driven neuron web behind every section below the hero */}
-      <NeuralBackground />
+      {/* Global particle experience: code sea → glyph building → galaxy */}
+      <ExperienceRoot />
       <div className="relative z-10">
         <main>
           {/* Page order — reorder/remove sections here. Map: CODE_MAP.md */}

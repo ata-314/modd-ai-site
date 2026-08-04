@@ -1,19 +1,17 @@
-// SECTION 01 — HERO: full-screen intro (boot loader, code sea, WebGL building, headline, CTAs, marquee). Texts: data/siteContent.ts → hero
+// SECTION 01 — HERO: pinned intro over the global particle experience.
+// Scroll phases (sea → building → galaxy) live in components/experience/;
+// this file owns the DOM layer: loader, headline, CTAs, marquee.
+// Texts: data/siteContent.ts → hero
 "use client";
 
-import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import SceneFallback from "@/components/three/SceneFallback";
-import CodeSeaCanvas from "@/components/three/CodeSeaCanvas";
 import MatrixRain from "@/components/three/MatrixRain";
 import Marquee from "@/components/ui/Marquee";
 import { siteContent } from "@/data/siteContent";
-
-const BuildingScene = dynamic(() => import("@/components/three/BuildingScene"), {
-  ssr: false,
-});
+import { experience, onExperienceReady } from "@/components/experience/state";
+import { HERO_SCROLL_VH } from "@/components/experience/phases";
 
 const SNIPPET_POSITIONS = [
   "left-[6%] top-[26%]",
@@ -24,55 +22,95 @@ const SNIPPET_POSITIONS = [
   "right-[14%] top-[46%] hidden lg:block",
 ];
 
+const BOOT_LINE_DELAY = 620; // ms between boot log lines starting to type
+const BOOT_CHAR_MS = 22;
+const EXIT_MS = 850;
+
+function useLoader(reduced: boolean, mounted: boolean) {
+  const [pct, setPct] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [phase, setPhase] = useState<"loading" | "exiting" | "gone">("loading");
+
+  useEffect(() => {
+    if (!mounted) return;
+    const seen = sessionStorage.getItem("modd-boot") === "1";
+    const minMs = reduced ? 900 : seen ? 1500 : 4500;
+    const maxMs = 8000;
+    const start = performance.now();
+    let finished = false;
+    let ready = false;
+    let raf = 0;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    // Fake-but-synced counter: creeps toward 92, snaps to 100 on finish.
+    const counter = { v: 0 };
+    const tween = gsap.to(counter, {
+      v: 92,
+      duration: minMs / 1000,
+      ease: "power2.out",
+      onUpdate: () => setPct(Math.round(counter.v)),
+    });
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      tween.kill();
+      setPct(100);
+      sessionStorage.setItem("modd-boot", "1");
+      timers.push(setTimeout(() => setPhase("exiting"), 300));
+      timers.push(setTimeout(() => setPhase("gone"), 300 + EXIT_MS));
+    };
+    const tryFinish = () => {
+      const el = performance.now() - start;
+      if ((ready && el >= minMs) || el >= maxMs) finish();
+    };
+
+    const offReady = onExperienceReady(() => {
+      ready = true;
+      tryFinish();
+    });
+    timers.push(setTimeout(tryFinish, minMs + 20));
+    timers.push(setTimeout(finish, maxMs)); // hard cap — never stuck at 95%
+
+    // Elapsed ticker drives the type-on boot log (~25fps, loader-only).
+    let lastTick = 0;
+    const tick = (now: number) => {
+      if (finished) return;
+      if (now - lastTick > 40) {
+        lastTick = now;
+        setElapsed(now - start);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    if (!reduced) raf = requestAnimationFrame(tick);
+
+    return () => {
+      tween.kill();
+      offReady();
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+    };
+  }, [mounted, reduced]);
+
+  return { pct, elapsed, phase };
+}
+
 export default function Hero() {
   const { hero } = siteContent;
   const sectionRef = useRef<HTMLElement>(null);
-  const progressRef = useRef(0);
   const [mounted, setMounted] = useState(false);
-  const [useWebGL, setUseWebGL] = useState(false);
   const [reduced, setReduced] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [pct, setPct] = useState(0);
-  const [loaderGone, setLoaderGone] = useState(false);
+  const [rainSize, setRainSize] = useState(28);
 
   useEffect(() => {
-    const prm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const coarse = window.matchMedia("(pointer: coarse)").matches;
-    const small = window.innerWidth < 820;
-    setReduced(prm);
-    setUseWebGL(!prm && !coarse && !small);
+    setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    setRainSize(window.innerWidth >= 768 ? 44 : 28);
     setMounted(true);
   }, []);
 
-  // Loader counter: creeps to 95, snaps to 100 when assets are ready.
-  useEffect(() => {
-    if (!mounted) return;
-    if (!useWebGL) {
-      setReady(true);
-      return;
-    }
-    const state = { v: 0 };
-    const tween = gsap.to(state, {
-      v: 95,
-      duration: 1.6,
-      ease: "power2.out",
-      onUpdate: () => setPct(Math.round(state.v)),
-    });
-    return () => {
-      tween.kill();
-    };
-  }, [mounted, useWebGL]);
+  const { pct, elapsed, phase } = useLoader(reduced, mounted);
 
-  useEffect(() => {
-    if (!ready) return;
-    setPct(100);
-    const t = setTimeout(() => setLoaderGone(true), 450);
-    return () => clearTimeout(t);
-  }, [ready]);
-
-  const onSceneReady = useCallback(() => setReady(true), []);
-
-  // Scroll-scrubbed sequence.
+  // Scroll-scrubbed DOM sequence + the experience's single progress source.
   useEffect(() => {
     if (!mounted) return;
     const el = sectionRef.current;
@@ -85,7 +123,7 @@ export default function Hero() {
         yPercent: 0,
         y: 0,
       });
-      progressRef.current = 1;
+      experience.hero = 1;
       return;
     }
 
@@ -98,112 +136,98 @@ export default function Hero() {
           end: "bottom bottom",
           scrub: 0.5,
           onUpdate: (self) => {
-            progressRef.current = self.progress;
+            experience.hero = self.progress;
           },
         },
       });
 
+      // ambient code fragments live only in the sea phase
       tl.fromTo(
         ".hero-code",
         { autoAlpha: 0, y: 8 },
-        { autoAlpha: 0.85, y: 0, stagger: 0.012, duration: 0.08 },
-        0
+        { autoAlpha: 0.85, y: 0, stagger: 0.008, duration: 0.06 },
+        0.01
       );
-      tl.to(".hero-hint", { autoAlpha: 0, duration: 0.06 }, 0.08);
-      tl.to(".hero-code", { autoAlpha: 0, stagger: 0.008, duration: 0.1 }, 0.55);
+      tl.to(".hero-hint", { autoAlpha: 0, duration: 0.04 }, 0.05);
+      tl.to(".hero-code", { autoAlpha: 0, stagger: 0.006, duration: 0.08 }, 0.3);
 
-      // Headline lines start physically low — hidden by the building's
-      // pixels (this layer sits behind the canvas) — and rise out from
-      // behind the roofline as scroll progresses.
+      // headline rises out of its own clip mask as the building completes
       tl.fromTo(
         ".hero-l1",
-        { y: "36vh" },
-        { y: 0, duration: 0.2, ease: "power2.out" },
-        0.44
+        { yPercent: 112 },
+        { yPercent: 0, duration: 0.14, ease: "power2.out" },
+        0.3
       );
       tl.fromTo(
         ".hero-l2",
-        { y: "44vh" },
-        { y: 0, duration: 0.22, ease: "power2.out" },
-        0.58
+        { yPercent: 112 },
+        { yPercent: 0, duration: 0.14, ease: "power2.out" },
+        0.36
       );
       tl.fromTo(
         ".hero-sub",
         { autoAlpha: 0, y: 22 },
-        { autoAlpha: 1, y: 0, duration: 0.09, ease: "power1.out" },
-        0.8
+        { autoAlpha: 1, y: 0, duration: 0.06, ease: "power1.out" },
+        0.5
       );
       tl.fromTo(
         ".hero-ctas",
         { autoAlpha: 0, y: 26 },
-        { autoAlpha: 1, y: 0, duration: 0.09, ease: "power1.out" },
-        0.85
+        { autoAlpha: 1, y: 0, duration: 0.06, ease: "power1.out" },
+        0.54
       );
       tl.fromTo(
         ".hero-marquee",
         { autoAlpha: 0 },
-        { autoAlpha: 1, duration: 0.08 },
-        0.9
+        { autoAlpha: 1, duration: 0.05 },
+        0.58
       );
-
-      if (!useWebGL) {
-        tl.fromTo(
-          ".hero-fallback-img",
-          { yPercent: 6, scale: 1.04, autoAlpha: 0.4 },
-          { yPercent: -2, scale: 1, autoAlpha: 1, duration: 0.7, ease: "power1.out" },
-          0.05
-        );
-      }
+      // everything bows out while the building dissolves into the galaxy
+      tl.to(
+        ".hero-stage",
+        { autoAlpha: 0, y: -40, duration: 0.12, ease: "power1.in" },
+        0.7
+      );
     }, el);
 
     return () => ctx.revert();
-  }, [mounted, reduced, useWebGL]);
+  }, [mounted, reduced]);
 
-  const sectionHeight = reduced ? "min-h-screen" : "h-[240vh]";
+  const bootLines = hero.loader.lines;
 
   return (
-    <section ref={sectionRef} className={`relative ${sectionHeight}`} id="top">
-      <div className={`${reduced ? "relative min-h-screen" : "sticky top-0 h-screen"} overflow-hidden bg-bg`}>
-        {/* Layer 0 — flowing code sea (behind everything) */}
-        <div className="absolute inset-0 z-0">
-          <CodeSeaCanvas progressRef={progressRef} />
-        </div>
-
-        {/* Layer 1 — headline, sits BEHIND the building canvas so lines
-            emerge from behind the roofline */}
-        <div className="absolute inset-x-0 top-[8vh] z-10 px-6 text-center md:top-[9vh]">
-          <h1 className="font-display leading-[0.98] tracking-tight">
-            <span className="hero-l1 block text-[length:var(--step-3)] font-medium will-change-transform">
-              {hero.line1}
-            </span>
-            <span className="hero-l2 block pb-[0.1em] will-change-transform">
-              <span className="font-[family-name:var(--font-instrument-serif)] text-[calc(var(--step-display)*1.22)] italic leading-[0.9] tracking-normal text-fg">
-                Artist
+    <section
+      ref={sectionRef}
+      className="relative"
+      style={{ height: reduced ? "100vh" : `${HERO_SCROLL_VH}vh` }}
+      id="top"
+    >
+      <div className={`${reduced ? "relative min-h-screen" : "sticky top-0 h-screen"} overflow-hidden`}>
+        <div className="hero-stage absolute inset-0">
+          {/* Headline — each line reveals through its own clip mask */}
+          <div className="absolute inset-x-0 top-[10vh] z-10 px-6 text-center md:top-[11vh]">
+            <h1 className="font-display leading-[0.98] tracking-tight">
+              <span className="block overflow-hidden pb-[0.06em]">
+                <span className="hero-l1 block text-[length:var(--step-3)] font-medium will-change-transform">
+                  {hero.line1}
+                </span>
               </span>
-              <span className="text-[length:var(--step-display)] font-bold">
-                {" "}
-                + <span className="text-accent">AI.</span>
+              <span className="block overflow-hidden pb-[0.12em]">
+                <span className="hero-l2 block will-change-transform">
+                  <span className="font-[family-name:var(--font-instrument-serif)] text-[calc(var(--step-display)*1.22)] italic leading-[0.9] tracking-normal text-fg">
+                    Artist
+                  </span>
+                  <span className="text-[length:var(--step-display)] font-bold">
+                    {" "}
+                    + <span className="text-accent">AI.</span>
+                  </span>
+                </span>
               </span>
-            </span>
-          </h1>
-        </div>
+            </h1>
+          </div>
 
-        {/* Layer 2 — WebGL building (occludes the headline while it rises) */}
-        <div className="pointer-events-none absolute inset-0 z-20">
-          {mounted && useWebGL && !reduced && (
-            <BuildingScene
-              imageUrl={hero.building.texture}
-              progressRef={progressRef}
-              onReady={onSceneReady}
-            />
-          )}
-          {mounted && (!useWebGL || reduced) && (
-            <div className="hero-fallback-img absolute inset-0">
-              <SceneFallback />
-            </div>
-          )}
-          {/* Floating code fragments — same depth as the building */}
-          <div aria-hidden="true" className="absolute inset-0">
+          {/* Floating code fragments — sea-phase ambience */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10">
             {hero.codeSnippets.slice(0, 6).map((snip, i) => (
               <span
                 key={snip}
@@ -215,89 +239,91 @@ export default function Hero() {
               </span>
             ))}
           </div>
-        </div>
 
-        {/* Layer 3 — subline, pill CTAs, marquee (above the building) */}
-        <div className="absolute inset-x-0 bottom-0 z-30">
-          <div className="px-6 pb-8 text-center">
-            <p
-              className="hero-sub hero-seq mx-auto max-w-md text-[length:var(--step-0)] text-fg/75 opacity-0"
-              style={{ textShadow: "0 1px 12px rgba(3,3,3,0.9)" }}
-            >
-              {hero.subline}
-            </p>
-            <div className="hero-ctas hero-seq mt-6 flex flex-wrap items-center justify-center gap-4 opacity-0">
-              <a
-                href={hero.ctaPrimary.href}
-                className="group inline-flex items-center gap-2 rounded-full bg-fg px-7 py-3.5 font-mono text-xs uppercase tracking-widest text-bg transition-colors hover:bg-accent hover:text-black focus-visible:bg-accent focus-visible:text-black active:translate-y-px"
+          {/* Subline, CTAs, marquee */}
+          <div className="absolute inset-x-0 bottom-0 z-20">
+            <div className="px-6 pb-8 text-center">
+              <p
+                className="hero-sub hero-seq mx-auto max-w-md text-[length:var(--step-0)] text-fg/75 opacity-0"
+                style={{ textShadow: "0 1px 12px rgba(3,3,3,0.9)" }}
               >
-                {hero.ctaPrimary.label}
-                <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
-                  →
-                </span>
-              </a>
-              <a
-                href={hero.ctaSecondary.href}
-                className="group inline-flex items-center gap-2 rounded-full border border-line bg-bg/60 px-7 py-3.5 font-mono text-xs uppercase tracking-widest text-fg backdrop-blur-sm transition-colors hover:border-accent hover:text-accent active:translate-y-px"
-              >
-                {hero.ctaSecondary.label}
-                <span aria-hidden="true" className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
-                  ↗
-                </span>
-              </a>
+                {hero.subline}
+              </p>
+              <div className="hero-ctas hero-seq mt-6 flex flex-wrap items-center justify-center gap-4 opacity-0">
+                <a
+                  href={hero.ctaPrimary.href}
+                  className="group inline-flex items-center gap-2 rounded-full bg-fg px-7 py-3.5 font-mono text-xs uppercase tracking-widest text-bg transition-colors hover:bg-accent hover:text-black focus-visible:bg-accent focus-visible:text-black active:translate-y-px"
+                >
+                  {hero.ctaPrimary.label}
+                  <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
+                    →
+                  </span>
+                </a>
+                <a
+                  href={hero.ctaSecondary.href}
+                  className="glass group inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-mono text-xs uppercase tracking-widest text-fg transition-colors hover:border-accent hover:text-accent active:translate-y-px"
+                >
+                  {hero.ctaSecondary.label}
+                  <span aria-hidden="true" className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
+                    ↗
+                  </span>
+                </a>
+              </div>
+            </div>
+            <div className="hero-marquee hero-seq opacity-0">
+              <Marquee items={hero.marquee} />
             </div>
           </div>
-          <div className="hero-marquee hero-seq opacity-0">
-            <Marquee items={hero.marquee} />
-          </div>
+
+          {/* Scroll hint */}
+          {!reduced && (
+            <div className="hero-hint absolute bottom-24 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
+                Scroll
+              </span>
+              <span className="h-8 w-px bg-accent/60" aria-hidden="true" />
+            </div>
+          )}
         </div>
 
-        {/* Scroll hint */}
-        {!reduced && (
-          <div className="hero-hint absolute bottom-24 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted">
-              Scroll
-            </span>
-            <span className="h-8 w-px bg-accent/60" aria-hidden="true" />
-          </div>
-        )}
-
-        {/* Loader */}
-        {!loaderGone && (
+        {/* Boot loader — min 4.5s cinematic, 8s hard cap, session-aware */}
+        {phase !== "gone" && (
           <div
-            className={`absolute inset-0 z-40 flex flex-col items-center justify-center bg-bg transition-opacity duration-500 ${
-              ready ? "opacity-0" : "opacity-100"
+            role="status"
+            aria-live="polite"
+            className={`absolute inset-0 z-40 flex flex-col items-center justify-center bg-bg transition-all ease-out ${
+              phase === "exiting" ? "scale-[1.05] opacity-0 blur-md" : "opacity-100"
             }`}
-            aria-hidden={ready}
+            style={{ transitionDuration: `${EXIT_MS}ms` }}
           >
-            {/* Matrix rain fills the boot screen; unmounts with the loader */}
-            <MatrixRain fontSize={26} className="opacity-40" />
-            <p className="relative font-display text-3xl font-bold tracking-tight">
+            <span className="sr-only">Loading the MODD-AI creative system</span>
+            {mounted && <MatrixRain fontSize={rainSize} className="opacity-35" />}
+            <p className="relative font-display text-4xl font-bold tracking-tight md:text-6xl">
               {hero.loader.title}
             </p>
-            <p className="relative mt-3 font-mono text-xs uppercase tracking-[0.35em] text-muted">
+            <p className="relative mt-4 font-mono text-xs uppercase tracking-[0.4em] text-muted md:text-sm">
               {hero.loader.caption}
             </p>
-            {/* Boot log — lines "load" with the progress counter */}
+            {/* Boot log — lines type on in sequence */}
             <div
-              className="relative mt-8 h-36 w-80 bg-bg/55 p-2 text-left font-mono text-[13px] leading-7 text-muted backdrop-blur-[2px]"
+              className="relative mt-10 min-h-44 w-[min(88vw,34rem)] text-left font-mono text-sm leading-8 text-muted md:text-base"
               aria-hidden="true"
             >
-              {hero.loader.lines
-                .slice(
-                  0,
-                  Math.max(1, Math.ceil((pct / 100) * hero.loader.lines.length))
-                )
-                .map((line, i, arr) => (
-                  <p key={line}>
-                    <span className="text-accent">›</span> {line}
-                    {i === arr.length - 1 && pct < 100 && (
-                      <span className="blink text-accent">▌</span>
-                    )}
+              {bootLines.map((line, i) => {
+                const chars = reduced
+                  ? line.length
+                  : Math.max(0, Math.floor((elapsed - i * BOOT_LINE_DELAY) / BOOT_CHAR_MS));
+                if (chars <= 0) return null;
+                const done = chars >= line.length;
+                return (
+                  <p key={line} style={{ textShadow: "0 1px 10px rgba(3,3,3,0.95)" }}>
+                    <span className="text-accent">›</span> {line.slice(0, chars)}
+                    {!done && <span className="blink text-accent">▌</span>}
                   </p>
-                ))}
+                );
+              })}
             </div>
-            <p className="relative mt-2 font-mono text-base text-accent tabular-nums">
+            <p className="absolute bottom-10 right-8 font-mono text-lg text-accent tabular-nums md:right-12">
               {String(Math.min(pct, 100)).padStart(2, "0")}%
             </p>
           </div>

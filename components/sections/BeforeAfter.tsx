@@ -47,7 +47,7 @@ function ComparisonSlider({ comparison }: { comparison: (typeof comparisons)[num
 
   return (
     <figure>
-      <div className="brackets relative aspect-video w-full select-none overflow-hidden bg-panel">
+      <div className="glass relative aspect-video w-full select-none overflow-hidden">
         {/* BEFORE — full frame */}
         <Side side={comparison.before} tone="before" />
         {/* AFTER — clipped to the right of the divider */}
