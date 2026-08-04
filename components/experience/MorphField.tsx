@@ -52,18 +52,26 @@ const vertexShader = /* glsl */ `
   const float DEPTH = 46.0;
 
   void main() {
-    // ---- Sea: perspective ocean flowing toward the camera --------------
+    // ---- Sea: cyberpunk code valley flowing toward the camera ----------
+    // Ridged glyph mountain ranges flank a flat data-corridor down the
+    // middle; the whole terrain streams toward the viewer and far peaks
+    // fade into fog. Ridgelines glow accent.
     float zLin = mod(aSea.z - uSeaOff, DEPTH);
     float depthFrac = zLin / DEPTH;               // 0 near → 1 far
     vec3 sea;
     sea.z = 6.0 - zLin;
-    sea.x = aSea.x * mix(9.0, 36.0, depthFrac);
-    float wave =
-      sin(sea.x * 0.35 + uTime * 1.05 + sea.z * 0.25) * 0.42 +
-      sin(sea.z * 0.50 - uTime * 0.65) * 0.55 +
-      sin(sea.x * 0.85 - uTime * 0.42 + aSea.y * 6.283) * 0.22;
-    sea.y = -2.35 + wave;
-    float crest = smoothstep(0.72, 1.05, wave);
+    sea.x = aSea.x * mix(10.0, 38.0, depthFrac);
+    float ridge1 = 1.0 - abs(sin(sea.x * 0.16 + sea.z * 0.075));
+    float ridge2 = 1.0 - abs(sin(sea.x * 0.055 - sea.z * 0.05 + 2.7));
+    float detail = sin(sea.x * 0.6 + sea.z * 0.35 + aSea.y * 6.283) * 0.14;
+    float corridor = smoothstep(1.6, 8.5, abs(sea.x));   // keep center open
+    float h = (ridge1 * 1.5 + ridge2 * 2.6 + detail) * corridor
+            * (0.45 + depthFrac * 1.15);
+    // valley floor: shallow flowing data-swell
+    h += sin(sea.x * 0.8 - uTime * 0.5) * 0.07
+       + sin(sea.z * 0.5 - uTime * 0.75) * 0.11;
+    sea.y = -2.45 + h;
+    float crest = smoothstep(1.5, 2.9, h);        // ridgelines + peaks glow
 
     // ---- Building: staggered formation, rigid spin, hold depth ---------
     float bStart = ${PHASES.buildStart.toFixed(3)} + aDelay * 0.45;
@@ -83,17 +91,19 @@ const vertexShader = /* glsl */ `
     vec3 g = aGalaxy;
     float gr = length(g.xz);
     float ga = uTime * 0.05 + uDoc * 2.2 + (5.5 - gr) * 0.12
-             + sin(uTime * 0.32 + gr * 1.7 + aSeed * 6.283) * 0.15;
+             + sin(uTime * 0.32 + gr * 1.7 + aSeed * 6.283) * 0.22;
     float gc = cos(ga);
     float gs = sin(ga);
     g.xz = vec2(g.x * gc - g.z * gs, g.x * gs + g.z * gc);
-    g.y += sin(uTime * 0.24 + gr * 2.0 + aSeed * 12.0) * 0.17;
+    g.y += sin(uTime * 0.24 + gr * 2.0 + aSeed * 12.0) * 0.24;
     g *= 1.0 + uDoc * 0.35 + sin(uTime * 0.2 + aSeed * 3.0) * 0.02;
     // tilt the disk toward the camera
     float tc = cos(-0.45);
     float ts = sin(-0.45);
     g.yz = vec2(g.y * tc - g.z * ts, g.y * ts + g.z * tc);
-    g.y -= uDoc * 1.4;
+    // the whole form streams downward as the page scrolls — each particle
+    // falls at its own rate, so the spiral pours rather than translates
+    g.y -= uDoc * (2.3 + aSeed * 1.8);
 
     // ---- Brain: the galaxy condenses into a mind deep in the page ------
     float wBr = smoothstep(0.50, 0.78, uDoc) * wG;
@@ -184,8 +194,8 @@ const fragmentShader = /* glsl */ `
 
     vec3 lime = vec3(0.772, 1.0, 0.129);
 
-    // sea: muted gray, crests spark accent
-    vec3 seaCol = mix(vec3(0.42, 0.45, 0.48), lime, max(vCrest * 0.85, step(vSeed, 0.045)));
+    // sea: muted gray, ridgelines + scattered neon spark accent
+    vec3 seaCol = mix(vec3(0.42, 0.45, 0.48), lime, max(vCrest * 0.9, step(vSeed, 0.07)));
     // building: luminance-shaded facade; accent only on selected edges
     vec3 shade = mix(vec3(0.16, 0.18, 0.20), vec3(0.85, 0.90, 0.93), vLum);
     float bAccent = vEdge * step(vSeed, 0.12);

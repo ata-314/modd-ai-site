@@ -45,7 +45,7 @@ export default function ExperienceCanvas({ onFail }: { onFail: () => void }) {
   // real 3D model when present; falls back to the image silhouette.
   useEffect(() => {
     let cancelled = false;
-    sampleModel("/models/building.glb", quality.buildingSamples, BUILDING_PLANE_W)
+    sampleModel(quality.buildingSamples, BUILDING_PLANE_W)
       .catch(() =>
         sampleBuilding(
           siteContent.hero.building.texture,
