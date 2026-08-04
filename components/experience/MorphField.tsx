@@ -178,10 +178,10 @@ const vertexShader = /* glsl */ `
     float seaA = (0.55 + crest * 0.3) * fogA * max(nearFade, toGather) + skyline * 0.3;
     float a = mix(seaA, 0.5, toGather * 0.85);
     // exponential rear suppression: with additive blending, thousands of
-    // faint rear-surface glyphs would pile into fog over the facade —
-    // punish depth hard so only the camera-facing shell of the 3D model
-    // (and its rim) actually shows
-    a = mix(a, 0.95 * pow(depthShade, 2.2), wB);
+    // faint rear-surface glyphs would pile into fog over the facade.
+    // The glyphs are a code aura over the holographic mesh, so they stay
+    // moderate — the architecture itself is carried by HoloBuilding.
+    a = mix(a, 0.6 * pow(depthShade, 2.2), wB);
     a = mix(a, 0.55, wG);
     a = mix(a, 0.62, wBr);
     a += smoothstep(1.35, 0.0, md) * 0.25;                     // pointer glow
