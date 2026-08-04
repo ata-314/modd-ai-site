@@ -7,6 +7,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import SceneFallback from "@/components/three/SceneFallback";
 import CodeSeaCanvas from "@/components/three/CodeSeaCanvas";
+import MatrixRain from "@/components/three/MatrixRain";
 import Marquee from "@/components/ui/Marquee";
 import { siteContent } from "@/data/siteContent";
 
@@ -165,7 +166,7 @@ export default function Hero() {
       <div className={`${reduced ? "relative min-h-screen" : "sticky top-0 h-screen"} overflow-hidden bg-bg`}>
         {/* Layer 0 — flowing code sea (behind everything) */}
         <div className="absolute inset-0 z-0">
-          <CodeSeaCanvas />
+          <CodeSeaCanvas progressRef={progressRef} />
         </div>
 
         {/* Layer 1 — headline, sits BEHIND the building canvas so lines
@@ -269,15 +270,17 @@ export default function Hero() {
             }`}
             aria-hidden={ready}
           >
-            <p className="font-display text-2xl font-bold tracking-tight">
+            {/* Matrix rain fills the boot screen; unmounts with the loader */}
+            <MatrixRain fontSize={26} className="opacity-40" />
+            <p className="relative font-display text-3xl font-bold tracking-tight">
               {hero.loader.title}
             </p>
-            <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.35em] text-muted">
+            <p className="relative mt-3 font-mono text-xs uppercase tracking-[0.35em] text-muted">
               {hero.loader.caption}
             </p>
             {/* Boot log — lines "load" with the progress counter */}
             <div
-              className="mt-8 h-32 w-72 text-left font-mono text-[11px] leading-6 text-muted"
+              className="relative mt-8 h-36 w-80 bg-bg/55 p-2 text-left font-mono text-[13px] leading-7 text-muted backdrop-blur-[2px]"
               aria-hidden="true"
             >
               {hero.loader.lines
@@ -294,7 +297,7 @@ export default function Hero() {
                   </p>
                 ))}
             </div>
-            <p className="mt-2 font-mono text-sm text-accent tabular-nums">
+            <p className="relative mt-2 font-mono text-base text-accent tabular-nums">
               {String(Math.min(pct, 100)).padStart(2, "0")}%
             </p>
           </div>

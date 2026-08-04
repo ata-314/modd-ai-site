@@ -41,7 +41,8 @@ Defined in `app/page.tsx` — reorder or remove sections there.
 
 ## The moving parts (leave unless intentional)
 
-- `components/three/` — WebGL hero: `BuildingScene` (particle building), `CodeSeaCanvas` (flowing glyph background), plus camera/sampling helpers. Heavy; only loads on desktop, non-reduced-motion.
+- `components/three/` — WebGL hero: `BuildingScene` (particle building), `CodeSeaCanvas` (perspective Matrix code ocean; density/speed tied to hero scroll), `MatrixRain` (loader's big falling glyphs), `NeuralBackground` (scroll-driven neuron web behind all post-hero sections), plus camera/sampling helpers. Heavy parts only load on desktop, non-reduced-motion.
+- `components/ui/Cursor.tsx` — futuristic custom cursor (3D-tilting accent ring + dot); styles in `globals.css` `.cursor-*`.
 - `animations/SmoothScroll.tsx` — Lenis smooth scrolling wrapper around the whole page.
 - `animations/TextReveal.tsx` — reusable scroll-in text animation.
 - `components/ui/Marquee.tsx` — infinite scrolling strip (hero bottom).

@@ -6,6 +6,7 @@ import {
   Instrument_Serif,
 } from "next/font/google";
 import "./globals.css";
+import Cursor from "@/components/ui/Cursor";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-bg text-fg">
         {children}
         <div className="grain" aria-hidden="true" />
+        <Cursor />
       </body>
     </html>
   );

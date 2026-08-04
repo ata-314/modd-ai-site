@@ -2,15 +2,23 @@
 
 import { useEffect, useRef } from "react";
 
-const CHARS = "01{}<>/;:+xyz=*#".split("");
+// Matrix glyph set — half-width katakana + digits, like the film's rain.
+const CHARS =
+  "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789".split("");
 
 // Perspective code ocean behind the whole hero (Conos-style). A plane of
-// terminal glyphs recedes to a horizon and flows continuously TOWARD the
+// Matrix glyphs recedes to a horizon and flows continuously TOWARD the
 // viewer; glyph height rides layered sine waves, crests light up accent.
 // 2D canvas with manual 3D projection — cheap, and it must stay behind the
 // headline while the WebGL building canvas sits in front.
 // Mouse: camera parallax + nearby glyphs part away and light up.
-export default function CodeSeaCanvas() {
+// `progressRef` (hero scroll progress 0→1): at 0 the sea is dense and fast;
+// as the building takes the stage it slows, thins out, and dims into the bg.
+export default function CodeSeaCanvas({
+  progressRef,
+}: {
+  progressRef?: React.RefObject<number>;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -33,9 +41,9 @@ export default function CodeSeaCanvas() {
     const FAR = 1700;
     const CAM_HEIGHT = 130;
     const X_SPREAD = 1100;
-    const FLOW_SPEED = 150; // units/s toward the viewer
-    const ROWS = coarse ? 26 : 46;
-    const COLS = coarse ? 16 : 34;
+    const FLOW_SPEED = 195; // units/s toward the viewer, at progress 0
+    const ROWS = coarse ? 28 : 52;
+    const COLS = coarse ? 18 : 40;
 
     const mouse = { x: -9999, y: -9999, nx: 0, ny: 0 };
     const cam = { x: 0, y: 0 }; // smoothed parallax offset
@@ -49,6 +57,7 @@ export default function CodeSeaCanvas() {
     }
     interface Row {
       z: number;
+      cull: number; // rows with low cull thin out first as progress rises
       glyphs: Glyph[];
     }
     let rows: Row[] = [];
@@ -66,7 +75,7 @@ export default function CodeSeaCanvas() {
           flip: Math.random() * 1000,
         });
       }
-      return { z, glyphs };
+      return { z, cull: Math.random(), glyphs };
     };
 
     const build = () => {
@@ -95,6 +104,11 @@ export default function CodeSeaCanvas() {
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
+      // Hero scroll progress: sea recedes as the building takes the stage.
+      const p = Math.min(Math.max(progressRef?.current ?? 0, 0), 1);
+      const flow = FLOW_SPEED * (1 - 0.78 * p);
+      const dim = 1 - 0.68 * p;
+
       // Smoothed camera parallax from normalized mouse position.
       cam.x += (mouse.nx * 90 - cam.x) * 0.04;
       cam.y += (mouse.ny * 36 - cam.y) * 0.04;
@@ -105,7 +119,7 @@ export default function CodeSeaCanvas() {
       // Flow toward the viewer; wrap rows back to the horizon.
       if (!reduced) {
         for (const row of rows) {
-          row.z -= FLOW_SPEED * dt;
+          row.z -= flow * dt;
           if (row.z < NEAR) {
             row.z += FAR - NEAR;
             for (const g of row.glyphs) {
@@ -119,11 +133,12 @@ export default function CodeSeaCanvas() {
       // Far rows first so near glyphs paint over them.
       const sorted = [...rows].sort((a, b) => b.z - a.z);
       for (const row of sorted) {
+        if (row.cull < p * 0.62) continue; // sea thins as building appears
         const z = row.z;
         const scale = focal / z;
         const size = Math.min(Math.max(13 * scale, 5), 19);
         const fog = Math.max(0, Math.min(1, 1 - (z - NEAR) / (FAR - NEAR)));
-        const baseA = 0.045 + fog * fog * 0.3;
+        const baseA = (0.05 + fog * fog * 0.34) * dim;
         ctx.font = `${size.toFixed(1)}px ui-monospace, Menlo, monospace`;
 
         for (const g of row.glyphs) {
@@ -216,7 +231,7 @@ export default function CodeSeaCanvas() {
       window.removeEventListener("pointerout", onLeave);
       io.disconnect();
     };
-  }, []);
+  }, [progressRef]);
 
   return (
     <canvas

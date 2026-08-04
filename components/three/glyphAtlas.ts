@@ -1,7 +1,8 @@
 import * as THREE from "three";
 
-// 4x4 atlas of terminal characters rendered once to a canvas texture.
-const GLYPHS = ["0", "1", "{", "}", "<", ">", "/", ";", ":", "+", "x", "y", "z", "=", "*", "#"];
+// 4x4 atlas of Matrix glyphs (half-width katakana + digits) rendered once
+// to a canvas texture.
+const GLYPHS = ["0", "1", "ｱ", "ｼ", "ﾂ", "ｶ", "ﾀ", "ﾈ", "ﾓ", "ﾃ", "ﾋ", "ｸ", "ﾘ", "ﾅ", "ﾒ", "ﾜ"];
 
 export function createGlyphAtlas(): THREE.CanvasTexture {
   const size = 256;

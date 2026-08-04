@@ -1,4 +1,5 @@
 import SmoothScroll from "@/animations/SmoothScroll";
+import NeuralBackground from "@/components/three/NeuralBackground";
 import Header from "@/components/layout/Header";
 import Hero from "@/components/sections/Hero";
 import Showreel from "@/components/sections/Showreel";
@@ -16,20 +17,24 @@ export default function Home() {
   return (
     <SmoothScroll>
       <Header />
-      <main>
-        {/* Page order — reorder/remove sections here. Map: CODE_MAP.md */}
-        <Hero />          {/* 01 — full-screen intro */}
-        <Showreel />      {/* 02 — video frame */}
-        <Manifesto />     {/* 03 — statement text */}
-        <Services />      {/* 04 — service accordion */}
-        <BeforeAfter />   {/* 05 — transformation slider */}
-        <Pipeline />      {/* 06 — studio pipeline */}
-        <SelectedWork />  {/* 07 — project grid */}
-        <Process />       {/* 08 — method steps */}
-        <Philosophy />    {/* 09 — human × machine */}
-        <CTASection />    {/* 10 — closing CTA */}
-      </main>
-      <Footer />
+      {/* Scroll-driven neuron web behind every section below the hero */}
+      <NeuralBackground />
+      <div className="relative z-10">
+        <main>
+          {/* Page order — reorder/remove sections here. Map: CODE_MAP.md */}
+          <Hero />          {/* 01 — full-screen intro */}
+          <Showreel />      {/* 02 — video frame */}
+          <Manifesto />     {/* 03 — statement text */}
+          <Services />      {/* 04 — service accordion */}
+          <BeforeAfter />   {/* 05 — transformation slider */}
+          <Pipeline />      {/* 06 — studio pipeline */}
+          <SelectedWork />  {/* 07 — project grid */}
+          <Process />       {/* 08 — method steps */}
+          <Philosophy />    {/* 09 — human × machine */}
+          <CTASection />    {/* 10 — closing CTA */}
+        </main>
+        <Footer />
+      </div>
     </SmoothScroll>
   );
 }

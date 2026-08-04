@@ -131,6 +131,84 @@ body {
   animation: blink 0.9s step-end infinite;
 }
 
+/* Futuristic custom cursor — mounted by components/ui/Cursor.tsx */
+.custom-cursor,
+.custom-cursor * {
+  cursor: none !important;
+}
+.cursor-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  will-change: transform;
+  transform-style: preserve-3d;
+}
+.cursor-ring-spin {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(197, 255, 33, 0.7);
+  border-top-color: transparent;
+  border-bottom-color: rgba(197, 255, 33, 0.25);
+  box-shadow:
+    0 0 16px rgba(197, 255, 33, 0.28),
+    inset 0 0 10px rgba(197, 255, 33, 0.14);
+  animation: cursor-spin 3.2s linear infinite;
+}
+/* HUD corner brackets around the ring */
+.cursor-corners::before,
+.cursor-corners::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-color: rgba(197, 255, 33, 0.85);
+  border-style: solid;
+  transition: transform 0.25s ease;
+}
+.cursor-corners::before {
+  top: -5px;
+  left: -5px;
+  border-width: 1px 0 0 1px;
+}
+.cursor-corners::after {
+  bottom: -5px;
+  right: -5px;
+  border-width: 0 1px 1px 0;
+}
+.cursor-hover .cursor-corners::before {
+  transform: translate(-3px, -3px);
+}
+.cursor-hover .cursor-corners::after {
+  transform: translate(3px, 3px);
+}
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(197, 255, 33, 0.9);
+  will-change: transform;
+}
+@keyframes cursor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Subtle film grain over the whole page */
 .grain {
   position: fixed;
@@ -156,7 +234,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .marquee-track,
-  .blink {
+  .blink,
+  .cursor-ring-spin {
     animation: none;
   }
   html {
