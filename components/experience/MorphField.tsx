@@ -20,6 +20,7 @@ const vertexShader = /* glsl */ `
   attribute vec3 aSea;      // x: -1..1 slot, y: seed, z: depth offset
   attribute vec3 aBuild;
   attribute vec3 aGalaxy;
+  attribute vec3 aBrain;
   attribute float aDelay;   // 0..0.6 build stagger (roof + edges first)
   attribute float aSize;
   attribute float aGlyph;
@@ -39,12 +40,14 @@ const vertexShader = /* glsl */ `
   varying float vGlyph;
   varying float vB;
   varying float vG;
+  varying float vBr;
   varying float vCrest;
   varying float vLum;
   varying float vEdge;
   varying float vSeed;
   varying float vAlpha;
   varying float vDot;
+  varying float vPulse;
 
   const float DEPTH = 46.0;
 
@@ -76,27 +79,39 @@ const vertexShader = /* glsl */ `
     b = vec3(b.x * ca + b.z * sa, b.y, -b.x * sa + b.z * ca);
     b.z += (aSeed - 0.5) * 0.5 * smoothstep(${PHASES.buildEnd.toFixed(3)}, ${PHASES.holdEnd.toFixed(3)}, uP);
 
-    // ---- Galaxy: tilted spiral, differential rotation, scroll drift ----
+    // ---- Galaxy: tilted spiral, breathing swirl, scroll drift ----------
     vec3 g = aGalaxy;
     float gr = length(g.xz);
-    float ga = uTime * 0.05 + uDoc * 2.2 + (5.5 - gr) * 0.12;
+    float ga = uTime * 0.05 + uDoc * 2.2 + (5.5 - gr) * 0.12
+             + sin(uTime * 0.32 + gr * 1.7 + aSeed * 6.283) * 0.15;
     float gc = cos(ga);
     float gs = sin(ga);
     g.xz = vec2(g.x * gc - g.z * gs, g.x * gs + g.z * gc);
-    g.y += sin(uTime * 0.3 + aSeed * 6.283) * 0.08;
-    g *= 1.0 + uDoc * 0.35;
+    g.y += sin(uTime * 0.24 + gr * 2.0 + aSeed * 12.0) * 0.17;
+    g *= 1.0 + uDoc * 0.35 + sin(uTime * 0.2 + aSeed * 3.0) * 0.02;
     // tilt the disk toward the camera
     float tc = cos(-0.45);
     float ts = sin(-0.45);
     g.yz = vec2(g.y * tc - g.z * ts, g.y * ts + g.z * tc);
     g.y -= uDoc * 1.4;
 
+    // ---- Brain: the galaxy condenses into a mind deep in the page ------
+    float wBr = smoothstep(0.50, 0.78, uDoc) * wG;
+    vec3 br = aBrain;
+    float bra = uTime * 0.07 + uDoc * 1.2;
+    float bc = cos(bra);
+    float bs = sin(bra);
+    br.xz = vec2(br.x * bc - br.z * bs, br.x * bs + br.z * bc);
+    br *= 1.0 + 0.02 * sin(uTime * 1.1 + aSeed * 2.0);   // breathing
+    br.y += sin(uTime * 0.5 + aSeed * 9.42) * 0.05;
+
     // ---- Blend ---------------------------------------------------------
     vec3 pos = mix(sea, b, wB);
     pos = mix(pos, g, wG);
+    pos = mix(pos, br, wBr);
 
-    // turbulence only while mid-morph, so the dissolve reads as physical
-    float bell = wG * (1.0 - wG) * 2.0;
+    // turbulence only while mid-morph, so each dissolve reads as physical
+    float bell = max(wG * (1.0 - wG), wBr * (1.0 - wBr)) * 2.0;
     pos += vec3(
       sin(aSeed * 12.9 + uTime * 1.1),
       cos(aSeed * 7.7 + uTime * 1.4),
@@ -117,20 +132,25 @@ const vertexShader = /* glsl */ `
     // ---- Alpha ---------------------------------------------------------
     float fogA = 1.0 - depthFrac * 0.86;                       // depth fog
     float nearFade = smoothstep(6.0, 3.2, sea.z);
-    float seaA = (0.30 + crest * 0.28) * fogA * max(nearFade, wB + wG);
+    float seaA = (0.36 + crest * 0.28) * fogA * max(nearFade, wB + wG);
     float a = mix(seaA, 0.9, wB);
     a = mix(a, 0.55, wG);
+    a = mix(a, 0.62, wBr);
     a += smoothstep(1.35, 0.0, md) * 0.25;                     // pointer glow
     vAlpha = a * uDim;
 
     vGlyph = aGlyph;
     vB = wB;
     vG = wG;
+    vBr = wBr;
     vCrest = crest;
     vLum = aLum;
     vEdge = aEdge;
     vSeed = aSeed;
-    vDot = step(0.93, aSeed);   // ~7% render as bare energy points
+    vPulse = 0.6 + 0.4 * sin(uTime * 2.2 + aSeed * 25.0);
+    // sea + building stay pure Matrix glyphs; a few bare energy points
+    // appear only once the galaxy / brain forms take over
+    vDot = step(0.93, aSeed) * smoothstep(0.25, 0.6, max(wG, wBr));
   }
 `;
 
@@ -139,12 +159,14 @@ const fragmentShader = /* glsl */ `
   varying float vGlyph;
   varying float vB;
   varying float vG;
+  varying float vBr;
   varying float vCrest;
   varying float vLum;
   varying float vEdge;
   varying float vSeed;
   varying float vAlpha;
   varying float vDot;
+  varying float vPulse;
 
   const float GRID = ${ATLAS_GRID.toFixed(1)};
 
@@ -170,9 +192,12 @@ const fragmentShader = /* glsl */ `
     vec3 buildCol = mix(shade * mix(1.0, 1.25, vEdge), lime, bAccent);
     // galaxy: cool starlight with sparse accent
     vec3 galCol = mix(vec3(0.72, 0.76, 0.82), lime, step(vSeed, 0.06));
+    // brain: soft mind-gray, synapses pulse accent
+    vec3 brCol = mix(vec3(0.80, 0.82, 0.87), lime * vPulse, step(vSeed, 0.09));
 
     vec3 col = mix(seaCol, buildCol, vB);
     col = mix(col, galCol, vG);
+    col = mix(col, brCol, vBr);
 
     gl_FragColor = vec4(col, shape * vAlpha);
   }
@@ -201,6 +226,7 @@ export default function MorphField({ sample, quality }: Props) {
     const seas = new Float32Array(n * 3);
     const builds = new Float32Array(n * 3);
     const galaxies = new Float32Array(n * 3);
+    const brains = new Float32Array(n * 3);
     const delays = new Float32Array(n);
     const sizes = new Float32Array(n);
     const glyphs = new Float32Array(n);
@@ -243,6 +269,33 @@ export default function MorphField({ sample, quality }: Props) {
 
       glyphs[i] = Math.floor(hash(i + 600000) * GLYPH_COUNT);
       seeds[i] = hash(i + 700000);
+
+      // brain slot: two wrinkled hemispheres on a deformed sphere
+      const bu = hash(i + 800000);
+      const bv = hash(i + 900000);
+      const theta = bu * Math.PI * 2;
+      const phi = Math.acos(2 * bv - 1);
+      let bx = Math.sin(phi) * Math.cos(theta);
+      let by = Math.cos(phi);
+      let bz = Math.sin(phi) * Math.sin(theta);
+      // cortical folds — layered high-frequency ripples on the radius
+      const wrinkle =
+        Math.sin(bx * 6.2 + bz * 4.1 + by * 3.0) *
+        Math.sin(bz * 7.3 - bx * 5.2 + by * 2.1);
+      let rr = 1 + wrinkle * 0.07;
+      // longitudinal fissure between the hemispheres, deepest on top
+      const fissure =
+        Math.max(0, 1 - Math.abs(bx) / 0.14) * Math.max(0, by + 0.15);
+      rr -= fissure * 0.18;
+      bx *= 0.82 * rr;
+      by *= 0.74 * rr;
+      bz *= 1.06 * rr;
+      bx += Math.sign(bx) * 0.045; // hemisphere separation
+      if (by < -0.4) by = -0.4 + (by + 0.4) * 0.45; // flattened base
+      const BRAIN_SCALE = 2.7;
+      brains[i * 3] = bx * BRAIN_SCALE;
+      brains[i * 3 + 1] = by * BRAIN_SCALE + 0.3;
+      brains[i * 3 + 2] = bz * BRAIN_SCALE;
     }
 
     const geo = new THREE.BufferGeometry();
@@ -251,6 +304,7 @@ export default function MorphField({ sample, quality }: Props) {
     geo.setAttribute("aSea", new THREE.BufferAttribute(seas, 3));
     geo.setAttribute("aBuild", new THREE.BufferAttribute(builds, 3));
     geo.setAttribute("aGalaxy", new THREE.BufferAttribute(galaxies, 3));
+    geo.setAttribute("aBrain", new THREE.BufferAttribute(brains, 3));
     geo.setAttribute("aDelay", new THREE.BufferAttribute(delays, 1));
     geo.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
     geo.setAttribute("aGlyph", new THREE.BufferAttribute(glyphs, 1));

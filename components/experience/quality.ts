@@ -22,8 +22,8 @@ export function detectQuality(): QualityProfile {
   if (coarse || small || cores <= 4 || mem <= 2) {
     return {
       tier: "low",
-      particleCount: 1600,
-      buildingSamples: 1400,
+      particleCount: 2200,
+      buildingSamples: 1800,
       maxDpr: 1,
       pointerEffects: !coarse,
     };
@@ -31,16 +31,16 @@ export function detectQuality(): QualityProfile {
   if (cores <= 8 || mem <= 4) {
     return {
       tier: "mid",
-      particleCount: 3200,
-      buildingSamples: 3000,
+      particleCount: 4200,
+      buildingSamples: 3800,
       maxDpr: 1.5,
       pointerEffects: true,
     };
   }
   return {
     tier: "high",
-    particleCount: 5600,
-    buildingSamples: 5200,
+    particleCount: 7200,
+    buildingSamples: 6200,
     maxDpr: 1.5,
     pointerEffects: true,
   };

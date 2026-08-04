@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw asset sources (35MB meshy export etc.) — slim versions live in public/
+assets-src/

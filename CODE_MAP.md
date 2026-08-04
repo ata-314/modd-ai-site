@@ -33,10 +33,13 @@ Defined in `app/page.tsx` — reorder or remove sections there.
 ## The particle experience (`components/experience/`)
 
 One fixed WebGL canvas behind everything. A single particle system morphs
-**code sea → glyph building → galaxy** with scroll; the galaxy persists as the
-background below the hero. The building is drawn *entirely from glyphs* — the
-photo (`public/building/bina.webp`) is only an offscreen sampling source and
-is never displayed.
+**code sea → glyph building → galaxy → human brain** with scroll; the galaxy
+persists below the hero and condenses into a wrinkled two-hemisphere brain at
+~50–78% of the page (Philosophy territory), fully reversible. The building is
+drawn *entirely from Matrix glyphs*, sampled from the real 3D model at
+`public/models/building.glb` (slimmed Meshy export — geometry only, never
+rendered; raw 35MB source lives untracked in `assets-src/`). The photo
+(`public/building/bina.webp`) is the automatic fallback sampling source.
 
 - `phases.ts` — the central scroll timeline (phase boundaries, hero scroll length `HERO_SCROLL_VH`, JS weight mirror of the shader math). Change the choreography here.
 - `state.ts` — shared refs (hero/doc progress, pointer, scroll velocity) + loader-ready signal. Single source for scroll values.
