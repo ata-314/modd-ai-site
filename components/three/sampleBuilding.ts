@@ -12,6 +12,10 @@ export interface BuildingSample {
   accents: Float32Array; // 1 = lime, 0 = gray
   lums: Float32Array; // facade pixel luminance — glyphs render the image
   normals?: Float32Array; // surface normals (3D model path) — hologram lighting
+  /** 0 = architectural edge, 1 = surface, 2 = interior volume */
+  layers?: Float32Array;
+  /** scaled building dimensions — camera framing + grounding derive from this */
+  dims?: { w: number; h: number; d: number };
 }
 
 const GRID_W = 300;

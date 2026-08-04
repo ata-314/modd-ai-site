@@ -38,14 +38,18 @@ scroll. The sea phase is a ridged Matrix-glyph terrain: mountain ranges flank
 a flat data-corridor, streaming toward the viewer, ridgelines glowing accent.
 The galaxy pours downward as the page scrolls and condenses into a wrinkled
 two-hemisphere brain at ~50–78% of the page, fully reversible. The building
-itself is the real Meshy mesh (`HoloBuilding.tsx`): hologram shader over the
-true facade texture, fresnel rim, scanlines and an EdgesGeometry wireframe,
-posed corner-on at real proportions. Matrix glyphs sampled from the same GLB
-(`public/models/building.glb`, ~6MB high-fidelity slim; brightness from
-`facade.jpg`) wrap it as a code aura, and ~30% of the particle field never
-morphs — a permanent code sea flows behind the building and every section.
+is built entirely from code glyphs in three architectural layers sampled
+from the real GLB (`public/models/building.glb` + `facade.jpg` luminance):
+bright dense glyphs along EdgesGeometry structure lines, dimmer off-white/
+pale-green fill on the facades, sparse rising particles inside the volume.
+The solid model is never rendered. A computed cinematic camera frames it
+front-left three-quarter (fov 38, entrance-level looking up, distance from
+the model's Box3 so it fills ~60% of any viewport), with slow dolly-in, a
+≤10° scroll orbit and a counterclockwise dissolve into the galaxy. ~30% of
+the field never morphs — a permanent code sea flows behind everything.
 Raw 35MB Meshy source lives untracked in `assets-src/`; the photo
-(`public/building/bina.webp`) remains the automatic fallback sampler.
+(`public/building/bina.webp`) is the fallback sampler (failure logged,
+never silent).
 
 - `phases.ts` — the central scroll timeline (phase boundaries, hero scroll length `HERO_SCROLL_VH`, JS weight mirror of the shader math). Change the choreography here.
 - `state.ts` — shared refs (hero/doc progress, pointer, scroll velocity) + loader-ready signal. Single source for scroll values.

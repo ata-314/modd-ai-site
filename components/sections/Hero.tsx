@@ -123,7 +123,8 @@ export default function Hero() {
         yPercent: 0,
         y: 0,
       });
-      experience.hero = 1;
+      // reduced motion: hold the stable three-quarter holographic building
+      experience.hero = 0.55;
       return;
     }
 
