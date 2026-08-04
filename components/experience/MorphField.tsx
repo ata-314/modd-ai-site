@@ -14,12 +14,13 @@ import type { QualityProfile } from "./quality";
 // between them from a single scroll progress uniform. No per-frame attribute
 // writes, no React state — geometry is built once, uniforms are mutated.
 
-const BUILDING_PLANE_W = 7.4;
+const BUILDING_PLANE_W = 5.6;
 
 const vertexShader = /* glsl */ `
   attribute vec3 aSea;      // x: -1..1 slot, y: seed, z: depth offset
   attribute vec3 aStart;    // loose gather cloud around the building
   attribute vec3 aBuild;
+  attribute vec3 aNormal;   // building surface normal — hologram lighting
   attribute vec3 aGalaxy;
   attribute vec3 aBrain;
   attribute float aDelay;   // 0..0.6 build stagger (roof + edges first)
@@ -49,6 +50,9 @@ const vertexShader = /* glsl */ `
   varying float vAlpha;
   varying float vDot;
   varying float vPulse;
+  varying float vLit;
+  varying float vRim;
+  varying float vScan;
 
   const float DEPTH = 46.0;
 
@@ -66,13 +70,19 @@ const vertexShader = /* glsl */ `
     float ridge2 = 1.0 - abs(sin(sea.x * 0.055 - sea.z * 0.05 + 2.7));
     float detail = sin(sea.x * 0.6 + sea.z * 0.35 + aSea.y * 6.283) * 0.14;
     float corridor = smoothstep(1.2, 5.0, abs(sea.x));   // keep center open
-    float h = (ridge1 * 1.3 + ridge2 * 2.2 + detail) * corridor
+    // at the horizon the ranges close across the whole width — a distant
+    // half-holographic mountain chain behind the valley
+    float horizonRange = smoothstep(0.55, 0.9, depthFrac);
+    float relief = max(corridor, horizonRange);
+    float h = (ridge1 * 1.3 + ridge2 * 2.2 + detail) * relief
             * (0.75 + depthFrac * 0.9);
     // valley floor: shallow flowing data-swell
     h += sin(sea.x * 0.8 - uTime * 0.5) * 0.07
        + sin(sea.z * 0.5 - uTime * 0.75) * 0.11;
     sea.y = -2.3 + h;
     float crest = smoothstep(1.1, 2.4, h);        // ridgelines + peaks glow
+    // far peaks punch through the fog as a glowing hologram skyline
+    float skyline = horizonRange * crest;
 
     // ---- Building: gather, then lock ------------------------------------
     // Two stages: terrain codes first drift into a loose cloud around the
@@ -93,7 +103,17 @@ const vertexShader = /* glsl */ `
     float sa = sin(uSpin);
     vec3 b = aBuild;
     b = vec3(b.x * ca + b.z * sa, b.y, -b.x * sa + b.z * ca);
-    b.z += (aSeed - 0.5) * 0.25 * smoothstep(${PHASES.buildEnd.toFixed(3)}, ${PHASES.holdEnd.toFixed(3)}, uP);
+
+    // Hologram lighting: the model is true 3D, so readability comes from
+    // light, not flattening — camera-facing surfaces carry the texture,
+    // rear surfaces sink into the dark, silhouette edges rim-glow accent,
+    // and a slow scanline sweeps the volume.
+    vec3 bn = vec3(aNormal.x * ca + aNormal.z * sa, aNormal.y, -aNormal.x * sa + aNormal.z * ca);
+    float facing = bn.z;
+    float depthShade = smoothstep(-1.2, 1.0, b.z);
+    vLit = (0.30 + 0.70 * clamp(facing, 0.0, 1.0)) * (0.35 + 0.65 * depthShade);
+    vRim = smoothstep(0.70, 0.95, 1.0 - abs(facing)) * depthShade;
+    vScan = 0.88 + 0.12 * sin(b.y * 7.0 - uTime * 2.5);
 
     // ---- Galaxy: tilted spiral, breathing swirl, scroll drift ----------
     vec3 g = aGalaxy;
@@ -155,9 +175,13 @@ const vertexShader = /* glsl */ `
     // ---- Alpha ---------------------------------------------------------
     float fogA = 1.0 - depthFrac * 0.62;                       // depth fog
     float nearFade = smoothstep(6.0, 3.2, sea.z);
-    float seaA = (0.55 + crest * 0.3) * fogA * max(nearFade, toGather);
+    float seaA = (0.55 + crest * 0.3) * fogA * max(nearFade, toGather) + skyline * 0.3;
     float a = mix(seaA, 0.5, toGather * 0.85);
-    a = mix(a, 0.85, wB);
+    // exponential rear suppression: with additive blending, thousands of
+    // faint rear-surface glyphs would pile into fog over the facade —
+    // punish depth hard so only the camera-facing shell of the 3D model
+    // (and its rim) actually shows
+    a = mix(a, 0.95 * pow(depthShade, 2.2), wB);
     a = mix(a, 0.55, wG);
     a = mix(a, 0.62, wBr);
     a += smoothstep(1.35, 0.0, md) * 0.25;                     // pointer glow
@@ -172,9 +196,12 @@ const vertexShader = /* glsl */ `
     vEdge = aEdge;
     vSeed = aSeed;
     vPulse = 0.6 + 0.4 * sin(uTime * 2.2 + aSeed * 25.0);
-    // sea + building stay pure Matrix glyphs; a few bare energy points
-    // appear only once the galaxy / brain forms take over
-    vDot = step(0.93, aSeed) * smoothstep(0.25, 0.6, max(wG, wBr));
+    // sea + building stay pure Matrix glyphs; bare energy points appear in
+    // the galaxy, and the brain grows extra neuron nodes among its codes
+    vDot = max(
+      step(0.93, aSeed) * smoothstep(0.25, 0.6, wG),
+      step(0.86, aSeed) * smoothstep(0.3, 0.7, wBr)
+    );
   }
 `;
 
@@ -191,6 +218,9 @@ const fragmentShader = /* glsl */ `
   varying float vAlpha;
   varying float vDot;
   varying float vPulse;
+  varying float vLit;
+  varying float vRim;
+  varying float vScan;
 
   const float GRID = ${ATLAS_GRID.toFixed(1)};
 
@@ -210,14 +240,18 @@ const fragmentShader = /* glsl */ `
 
     // sea: cool teal-gray, ridgelines + scattered neon spark accent
     vec3 seaCol = mix(vec3(0.40, 0.52, 0.47), lime, max(vCrest * 0.9, step(vSeed, 0.07)));
-    // building: luminance-shaded facade; accent only on selected edges
-    vec3 shade = mix(vec3(0.16, 0.18, 0.20), vec3(0.85, 0.90, 0.93), vLum);
-    float bAccent = vEdge * step(vSeed, 0.12);
-    vec3 buildCol = mix(shade * mix(1.0, 1.25, vEdge), lime, bAccent);
+    // building: holographic facade — green-tinted luminance ramp under the
+    // hologram light, bright signage popping toward white, rim edges lime
+    float bLum = vLum * vLit;
+    vec3 buildCol = mix(vec3(0.05, 0.09, 0.06), vec3(0.72, 0.95, 0.50), bLum) * vScan;
+    buildCol = mix(buildCol, vec3(0.93, 0.97, 0.90), smoothstep(0.80, 1.0, bLum));
+    float bAccent = max(vEdge * step(vSeed, 0.12) * vLit, vRim * 0.85);
+    buildCol = mix(buildCol, lime, bAccent);
     // galaxy: cool starlight with sparse accent
     vec3 galCol = mix(vec3(0.72, 0.76, 0.82), lime, step(vSeed, 0.06));
-    // brain: soft mind-gray, synapses pulse accent
-    vec3 brCol = mix(vec3(0.80, 0.82, 0.87), lime * vPulse, step(vSeed, 0.09));
+    // brain: soft mind-gray codes; neuron nodes + synapses pulse accent
+    float synapse = max(step(vSeed, 0.12), vDot * 0.8);
+    vec3 brCol = mix(vec3(0.80, 0.82, 0.87), lime * vPulse, synapse);
 
     vec3 col = mix(seaCol, buildCol, vB);
     col = mix(col, galCol, vG);
@@ -250,6 +284,7 @@ export default function MorphField({ sample, quality }: Props) {
     const seas = new Float32Array(n * 3);
     const startsArr = new Float32Array(n * 3);
     const builds = new Float32Array(n * 3);
+    const normalsArr = new Float32Array(n * 3);
     const galaxies = new Float32Array(n * 3);
     const brains = new Float32Array(n * 3);
     const delays = new Float32Array(n);
@@ -277,6 +312,13 @@ export default function MorphField({ sample, quality }: Props) {
       startsArr[i * 3] = sample.starts[s * 3];
       startsArr[i * 3 + 1] = sample.starts[s * 3 + 1];
       startsArr[i * 3 + 2] = sample.starts[s * 3 + 2];
+      if (sample.normals) {
+        normalsArr[i * 3] = sample.normals[s * 3];
+        normalsArr[i * 3 + 1] = sample.normals[s * 3 + 1];
+        normalsArr[i * 3 + 2] = sample.normals[s * 3 + 2];
+      } else {
+        normalsArr[i * 3 + 2] = 1; // image plane: everything faces the camera
+      }
       delays[i] = sample.delays[s];
       edges[i] = sample.accents[s] > 0 || sample.sizes[s] > 7 ? 1 : 0;
       lums[i] = sample.lums[s];
@@ -332,6 +374,7 @@ export default function MorphField({ sample, quality }: Props) {
     geo.setAttribute("aSea", new THREE.BufferAttribute(seas, 3));
     geo.setAttribute("aStart", new THREE.BufferAttribute(startsArr, 3));
     geo.setAttribute("aBuild", new THREE.BufferAttribute(builds, 3));
+    geo.setAttribute("aNormal", new THREE.BufferAttribute(normalsArr, 3));
     geo.setAttribute("aGalaxy", new THREE.BufferAttribute(galaxies, 3));
     geo.setAttribute("aBrain", new THREE.BufferAttribute(brains, 3));
     geo.setAttribute("aDelay", new THREE.BufferAttribute(delays, 1));

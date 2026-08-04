@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { sampleBuilding, type BuildingSample } from "@/components/three/sampleBuilding";
+import { sampleModel } from "./sampleModel";
 import { siteContent } from "@/data/siteContent";
 import { detectQuality, type QualityProfile } from "./quality";
 import { experience } from "./state";
@@ -40,19 +41,21 @@ export default function ExperienceCanvas({ onFail }: { onFail: () => void }) {
   const [paused, setPaused] = useState(false);
   const lastScrollY = useRef(0);
 
-  // Offscreen building sampling — the cutout photo is data, never shown.
-  // The alpha silhouette + texture luminance give crisp architecture and
-  // legible signage; depth is a luminance bas-relief. (The Meshy GLB was
-  // tried here and reads as mush when glyph-sampled — full-surface 3D
-  // sampling has no silhouette. Its sampler remains in sampleModel.ts.)
+  // Offscreen building sampling — assets are data, never shown. Primary:
+  // the true-3D GLB with per-sample normals + facade-texture luminance
+  // (hologram lighting in the shader keeps it readable). Fallback: the
+  // alpha-cutout photo with a luminance bas-relief.
   useEffect(() => {
     let cancelled = false;
-    sampleBuilding(
-      siteContent.hero.building.texture,
-      quality.buildingSamples,
-      BUILDING_PLANE_W,
-      BUILDING_PLANE_W * (1350 / 3240)
-    )
+    sampleModel(quality.buildingSamples, BUILDING_PLANE_W)
+      .catch(() =>
+        sampleBuilding(
+          siteContent.hero.building.texture,
+          quality.buildingSamples,
+          BUILDING_PLANE_W,
+          BUILDING_PLANE_W * (1350 / 3240)
+        )
+      )
       .then((s) => {
         if (!cancelled) setSample(s);
       })

@@ -151,36 +151,37 @@ export default function Hero() {
       tl.to(".hero-hint", { autoAlpha: 0, duration: 0.04 }, 0.05);
       tl.to(".hero-code", { autoAlpha: 0, stagger: 0.006, duration: 0.08 }, 0.3);
 
-      // headline rises out of its own clip mask as the building completes
+      // headline rises out of its clip masks from behind the finished
+      // building's roofline — building first, then the words
       tl.fromTo(
         ".hero-l1",
-        { yPercent: 112 },
-        { yPercent: 0, duration: 0.14, ease: "power2.out" },
-        0.3
+        { yPercent: 118 },
+        { yPercent: 0, duration: 0.12, ease: "power2.out" },
+        0.4
       );
       tl.fromTo(
         ".hero-l2",
-        { yPercent: 112 },
-        { yPercent: 0, duration: 0.14, ease: "power2.out" },
-        0.36
+        { yPercent: 118 },
+        { yPercent: 0, duration: 0.12, ease: "power2.out" },
+        0.46
       );
       tl.fromTo(
         ".hero-sub",
         { autoAlpha: 0, y: 22 },
         { autoAlpha: 1, y: 0, duration: 0.06, ease: "power1.out" },
-        0.5
+        0.56
       );
       tl.fromTo(
         ".hero-ctas",
         { autoAlpha: 0, y: 26 },
         { autoAlpha: 1, y: 0, duration: 0.06, ease: "power1.out" },
-        0.54
+        0.6
       );
       tl.fromTo(
         ".hero-marquee",
         { autoAlpha: 0 },
         { autoAlpha: 1, duration: 0.05 },
-        0.58
+        0.63
       );
       // everything bows out while the building dissolves into the galaxy
       tl.to(

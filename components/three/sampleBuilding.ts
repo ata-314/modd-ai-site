@@ -11,6 +11,7 @@ export interface BuildingSample {
   glyphs: Float32Array; // atlas cell index
   accents: Float32Array; // 1 = lime, 0 = gray
   lums: Float32Array; // facade pixel luminance — glyphs render the image
+  normals?: Float32Array; // surface normals (3D model path) — hologram lighting
 }
 
 const GRID_W = 300;

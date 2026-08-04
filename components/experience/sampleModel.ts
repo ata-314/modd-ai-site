@@ -13,11 +13,15 @@ const MODEL_URL = "/models/building.glb";
 const FACADE_URL = "/models/facade.jpg";
 const TEX_SIZE = 1024;
 
+// NOTE: attributes are accessed via getX/getY/getZ, never via raw `.array` —
+// GLTFLoader may load interleaved buffers, where the raw array mixes
+// position/normal/uv components (reading it as packed xyz yields a sphere
+// of garbage — a bug this file has already lived through once).
 interface TriMesh {
-  pos: Float32Array;
-  nor: Float32Array | null;
-  uv: Float32Array | null;
-  index: Uint32Array | Uint16Array | null;
+  pos: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+  nor: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | null;
+  uv: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | null;
+  index: THREE.BufferAttribute | null;
   matrix: THREE.Matrix4;
   cumArea: Float64Array; // cumulative triangle areas for weighted picking
   totalArea: number;
@@ -44,13 +48,12 @@ async function loadFacade(): Promise<{ data: Uint8ClampedArray; w: number; h: nu
 
 function buildTriMesh(mesh: THREE.Mesh): TriMesh | null {
   const geo = mesh.geometry as THREE.BufferGeometry;
-  const posAttr = geo.attributes.position as THREE.BufferAttribute | undefined;
-  if (!posAttr) return null;
-  const pos = posAttr.array as Float32Array;
-  const nor = (geo.attributes.normal?.array as Float32Array) ?? null;
-  const uv = (geo.attributes.uv?.array as Float32Array) ?? null;
-  const index = (geo.index?.array as Uint32Array | Uint16Array) ?? null;
-  const triCount = (index ? index.length : posAttr.count) / 3;
+  const pos = geo.attributes.position;
+  if (!pos) return null;
+  const nor = geo.attributes.normal ?? null;
+  const uv = geo.attributes.uv ?? null;
+  const index = geo.index;
+  const triCount = (index ? index.count : pos.count) / 3;
 
   const cumArea = new Float64Array(triCount);
   const a = new THREE.Vector3();
@@ -58,12 +61,12 @@ function buildTriMesh(mesh: THREE.Mesh): TriMesh | null {
   const c = new THREE.Vector3();
   let total = 0;
   for (let t = 0; t < triCount; t++) {
-    const i0 = (index ? index[t * 3] : t * 3) * 3;
-    const i1 = (index ? index[t * 3 + 1] : t * 3 + 1) * 3;
-    const i2 = (index ? index[t * 3 + 2] : t * 3 + 2) * 3;
-    a.fromArray(pos, i0);
-    b.fromArray(pos, i1);
-    c.fromArray(pos, i2);
+    const i0 = index ? index.getX(t * 3) : t * 3;
+    const i1 = index ? index.getX(t * 3 + 1) : t * 3 + 1;
+    const i2 = index ? index.getX(t * 3 + 2) : t * 3 + 2;
+    a.fromBufferAttribute(pos, i0);
+    b.fromBufferAttribute(pos, i1);
+    c.fromBufferAttribute(pos, i2);
     b.sub(a);
     c.sub(a);
     total += b.cross(c).length() * 0.5;
@@ -117,6 +120,7 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
   const glyphs = new Float32Array(n);
   const accents = new Float32Array(n);
   const lums = new Float32Array(n);
+  const normals = new Float32Array(n * 3);
 
   const p = new THREE.Vector3();
   const nrm = new THREE.Vector3();
@@ -149,9 +153,9 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
         }
       }
       const t = pickTriangle(tm.cumArea, Math.random());
-      const i0 = tm.index ? tm.index[t * 3] : t * 3;
-      const i1 = tm.index ? tm.index[t * 3 + 1] : t * 3 + 1;
-      const i2 = tm.index ? tm.index[t * 3 + 2] : t * 3 + 2;
+      const i0 = tm.index ? tm.index.getX(t * 3) : t * 3;
+      const i1 = tm.index ? tm.index.getX(t * 3 + 1) : t * 3 + 1;
+      const i2 = tm.index ? tm.index.getX(t * 3 + 2) : t * 3 + 2;
       let bu = Math.random();
       let bv = Math.random();
       if (bu + bv > 1) {
@@ -160,9 +164,9 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
       }
       const bw = 1 - bu - bv;
 
-      v0.fromArray(tm.pos, i0 * 3);
-      v1.fromArray(tm.pos, i1 * 3);
-      v2.fromArray(tm.pos, i2 * 3);
+      v0.fromBufferAttribute(tm.pos, i0);
+      v1.fromBufferAttribute(tm.pos, i1);
+      v2.fromBufferAttribute(tm.pos, i2);
       p.set(
         v0.x * bw + v1.x * bu + v2.x * bv,
         v0.y * bw + v1.y * bu + v2.y * bv,
@@ -170,9 +174,9 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
       ).applyMatrix4(tm.matrix);
 
       if (tm.nor) {
-        v0.fromArray(tm.nor, i0 * 3);
-        v1.fromArray(tm.nor, i1 * 3);
-        v2.fromArray(tm.nor, i2 * 3);
+        v0.fromBufferAttribute(tm.nor, i0);
+        v1.fromBufferAttribute(tm.nor, i1);
+        v2.fromBufferAttribute(tm.nor, i2);
         nrm.set(
           v0.x * bw + v1.x * bu + v2.x * bv,
           v0.y * bw + v1.y * bu + v2.y * bv,
@@ -185,10 +189,10 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
       }
 
       nyTmp = (p.y - box.min.y) / Math.max(size.y, 1e-6);
-      const backFacing = nrm.z < -0.2;
+      // Back faces stay — the shader's hologram lighting hides them.
       const groundPlane = nrm.y > 0.7 && nyTmp < 0.06;
       tries++;
-      if ((!backFacing && !groundPlane) || tries >= 10) {
+      if (!groundPlane || tries >= 10) {
         uvA = bw;
         uvB = bu;
         uvC = bv;
@@ -204,8 +208,8 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
     // brightness from the real facade texture (glTF UV: v runs top-down)
     let lum: number;
     if (facade && tm.uv) {
-      const u = tm.uv[i0 * 2] * bw + tm.uv[i1 * 2] * bu + tm.uv[i2 * 2] * bv;
-      const v = tm.uv[i0 * 2 + 1] * bw + tm.uv[i1 * 2 + 1] * bu + tm.uv[i2 * 2 + 1] * bv;
+      const u = tm.uv.getX(i0) * bw + tm.uv.getX(i1) * bu + tm.uv.getX(i2) * bv;
+      const v = tm.uv.getY(i0) * bw + tm.uv.getY(i1) * bu + tm.uv.getY(i2) * bv;
       const tx = Math.min(facade.w - 1, Math.max(0, Math.floor((u % 1 + 1) % 1 * facade.w)));
       const ty = Math.min(facade.h - 1, Math.max(0, Math.floor((v % 1 + 1) % 1 * facade.h)));
       const idx = (ty * facade.w + tx) * 4;
@@ -223,11 +227,16 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
     // very bright texels (signage, lit windows) render larger + earlier
     const bright = lum > 0.72;
 
+    // true 3D targets — readability comes from the shader's hologram
+    // lighting (camera-facing surfaces lit, rear surfaces swallowed).
+    // Depth compressed 0.5x: the Meshy box is nearly as deep as it is
+    // wide, and at full depth the front facade pushes into the camera.
     targets[i * 3] = (p.x - center.x) * scale;
     targets[i * 3 + 1] = (p.y - center.y) * scale;
-    // bas-relief: keep a hint of depth for the rotation, but flatten the
-    // model so the facade reads as one crisp silhouette from the front
-    targets[i * 3 + 2] = (p.z - center.z) * scale * 0.22;
+    targets[i * 3 + 2] = (p.z - center.z) * scale * 0.5;
+    normals[i * 3] = nrm.x;
+    normals[i * 3 + 1] = nrm.y;
+    normals[i * 3 + 2] = nrm.z;
 
     starts[i * 3] = (Math.random() - 0.5) * planeW * 1.7;
     starts[i * 3 + 1] = (Math.random() - 0.5) * planeW;
@@ -237,7 +246,7 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
       0.6,
       (1 - ny) * 0.38 + (edge || bright ? 0 : 0.14) + Math.random() * 0.07
     );
-    sizes[i] = edge || bright ? 7 + Math.random() * 4 : 5 + Math.random() * 3;
+    sizes[i] = edge || bright ? 6.5 + Math.random() * 3.5 : 4.5 + Math.random() * 2.5;
     glyphs[i] = Math.floor(Math.random() * GLYPH_COUNT);
     accents[i] = (edge ? Math.random() < 0.18 : Math.random() < 0.03) ? 1 : 0;
     lums[i] = lum;
@@ -253,5 +262,5 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
     }
   });
 
-  return { count: n, starts, targets, delays, sizes, glyphs, accents, lums };
+  return { count: n, starts, targets, delays, sizes, glyphs, accents, lums, normals };
 }
