@@ -227,13 +227,11 @@ export async function sampleModel(count: number, planeW: number): Promise<Buildi
     // very bright texels (signage, lit windows) render larger + earlier
     const bright = lum > 0.72;
 
-    // true 3D targets — readability comes from the shader's hologram
-    // lighting (camera-facing surfaces lit, rear surfaces swallowed).
-    // Depth compressed 0.5x: the Meshy box is nearly as deep as it is
-    // wide, and at full depth the front facade pushes into the camera.
+    // true 3D targets at the model's real proportions — readability comes
+    // from the shader's hologram lighting, not from distorting the model
     targets[i * 3] = (p.x - center.x) * scale;
     targets[i * 3 + 1] = (p.y - center.y) * scale;
-    targets[i * 3 + 2] = (p.z - center.z) * scale * 0.5;
+    targets[i * 3 + 2] = (p.z - center.z) * scale;
     normals[i * 3] = nrm.x;
     normals[i * 3 + 1] = nrm.y;
     normals[i * 3 + 2] = nrm.z;

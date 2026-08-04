@@ -14,7 +14,7 @@ import type { QualityProfile } from "./quality";
 // between them from a single scroll progress uniform. No per-frame attribute
 // writes, no React state — geometry is built once, uniforms are mutated.
 
-const BUILDING_PLANE_W = 5.6;
+const BUILDING_PLANE_W = 4.8;
 
 const vertexShader = /* glsl */ `
   attribute vec3 aSea;      // x: -1..1 slot, y: seed, z: depth offset
@@ -89,12 +89,15 @@ const vertexShader = /* glsl */ `
     // building (aStart), then lock onto the facade. Mixing straight from
     // the huge sea coordinates would smear the building even at 95%
     // formed, so the final lock happens from the nearby cloud only.
-    float toGather = smoothstep(0.10, 0.32, uP);
+    // ~30% of the field never morphs: a permanent code sea keeps flowing
+    // behind the building and behind every section below the hero
+    float mor = 1.0 - step(aSea.y, 0.30);
+    float toGather = smoothstep(0.10, 0.32, uP) * mor;
     float t2 = clamp((uP - 0.28 - aDelay * 0.2) * 7.0, 0.0, 1.0);
     t2 = 1.0 - pow(1.0 - t2, 3.0);
     float dis = smoothstep(${PHASES.holdEnd.toFixed(3)} + aDelay * 0.10, ${PHASES.dissolveEnd.toFixed(3)}, uP);
-    float wB = t2 * (1.0 - dis);
-    float wG = smoothstep(${PHASES.holdEnd.toFixed(3)} + aDelay * 0.18, ${(PHASES.dissolveEnd + 0.05).toFixed(3)}, uP);
+    float wB = t2 * (1.0 - dis) * mor;
+    float wG = smoothstep(${PHASES.holdEnd.toFixed(3)} + aDelay * 0.18, ${(PHASES.dissolveEnd + 0.05).toFixed(3)}, uP) * mor;
     vec3 gather = aStart;
     gather.x += sin(uTime * 0.5 + aSeed * 6.283) * 0.25;
     gather.y += cos(uTime * 0.45 + aSeed * 9.4) * 0.2;
@@ -110,7 +113,7 @@ const vertexShader = /* glsl */ `
     // and a slow scanline sweeps the volume.
     vec3 bn = vec3(aNormal.x * ca + aNormal.z * sa, aNormal.y, -aNormal.x * sa + aNormal.z * ca);
     float facing = bn.z;
-    float depthShade = smoothstep(-1.2, 1.0, b.z);
+    float depthShade = smoothstep(-2.0, 1.6, b.z);
     vLit = (0.30 + 0.70 * clamp(facing, 0.0, 1.0)) * (0.35 + 0.65 * depthShade);
     vRim = smoothstep(0.70, 0.95, 1.0 - abs(facing)) * depthShade;
     vScan = 0.88 + 0.12 * sin(b.y * 7.0 - uTime * 2.5);

@@ -38,11 +38,13 @@ scroll. The sea phase is a ridged Matrix-glyph terrain: mountain ranges flank
 a flat data-corridor, streaming toward the viewer, ridgelines glowing accent.
 The galaxy pours downward as the page scrolls and condenses into a wrinkled
 two-hemisphere brain at ~50–78% of the page, fully reversible. The building
-is drawn *entirely from Matrix glyphs* sampled from the real 3D model
-(`public/models/building.glb`, geometry+UVs) with per-glyph brightness read
-from the real facade texture (`public/models/facade.jpg`) — signage and
-surface detail reproduce in the glyphs; neither asset is ever rendered
-directly. Raw 35MB Meshy source lives untracked in `assets-src/`; the photo
+itself is the real Meshy mesh (`HoloBuilding.tsx`): hologram shader over the
+true facade texture, fresnel rim, scanlines and an EdgesGeometry wireframe,
+posed corner-on at real proportions. Matrix glyphs sampled from the same GLB
+(`public/models/building.glb`, ~6MB high-fidelity slim; brightness from
+`facade.jpg`) wrap it as a code aura, and ~30% of the particle field never
+morphs — a permanent code sea flows behind the building and every section.
+Raw 35MB Meshy source lives untracked in `assets-src/`; the photo
 (`public/building/bina.webp`) remains the automatic fallback sampler.
 
 - `phases.ts` — the central scroll timeline (phase boundaries, hero scroll length `HERO_SCROLL_VH`, JS weight mirror of the shader math). Change the choreography here.

@@ -16,7 +16,7 @@ import { phaseWeights, BUILDING_BASE_YAW } from "./phases";
 
 const MODEL_URL = "/models/building.glb";
 const FACADE_URL = "/models/facade.jpg";
-const DEPTH_SQUASH = 0.5; // must match sampleModel's target compression
+const DEPTH_SQUASH = 1; // real proportions — the model is never distorted
 
 const vertexShader = /* glsl */ `
   varying vec3 vNormal;
