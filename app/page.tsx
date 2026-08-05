@@ -3,7 +3,9 @@ import ExperienceRoot from "@/components/experience/ExperienceRoot";
 import Header from "@/components/layout/Header";
 import Hero from "@/components/sections/Hero";
 import Showreel from "@/components/sections/Showreel";
+import WorkReel from "@/components/sections/WorkReel";
 import Manifesto from "@/components/sections/Manifesto";
+import Tools from "@/components/sections/Tools";
 import BeforeAfter from "@/components/sections/BeforeAfter";
 import Pipeline from "@/components/sections/Pipeline";
 import Services from "@/components/sections/Services";
@@ -24,14 +26,16 @@ export default function Home() {
           {/* Page order — reorder/remove sections here. Map: CODE_MAP.md */}
           <Hero />          {/* 01 — full-screen intro */}
           <Showreel />      {/* 02 — video frame */}
-          <Manifesto />     {/* 03 — statement text */}
-          <Services />      {/* 04 — service accordion */}
-          <BeforeAfter />   {/* 05 — transformation slider */}
-          <Pipeline />      {/* 06 — studio pipeline */}
-          <SelectedWork />  {/* 07 — project grid */}
-          <Process />       {/* 08 — method steps */}
-          <Philosophy />    {/* 09 — human × machine */}
-          <CTASection />    {/* 10 — closing CTA */}
+          <WorkReel />      {/* 03 — auto-scrolling 9:16 work reels */}
+          <Manifesto />     {/* 04 — statement text */}
+          <Services />      {/* 05 — service accordion */}
+          <Tools />         {/* 06 — toolbox marquee */}
+          <BeforeAfter />   {/* 07 — transformation slider */}
+          <Pipeline />      {/* 08 — studio pipeline */}
+          <SelectedWork />  {/* 09 — project grid */}
+          <Process />       {/* 10 — method steps */}
+          <Philosophy />    {/* 11 — human × machine */}
+          <CTASection />    {/* 12 — closing CTA */}
         </main>
         <Footer />
       </div>

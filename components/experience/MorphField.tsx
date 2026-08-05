@@ -167,6 +167,11 @@ const vertexShader = /* glsl */ `
     // the whole form streams downward as the page scrolls — each particle
     // falls at its own rate, so the spiral pours rather than translates
     g.y -= uDoc * (1.6 + aSeed * 0.9);
+    // scroll-driven lateral life: the disk glides side to side and banks
+    // gently on its axis as the page moves
+    g.x += sin(uDoc * 5.5 + gr * 0.25) * (0.8 + 0.5 * sin(uDoc * 2.3));
+    float bank = sin(uDoc * 3.7) * 0.12;
+    g.xy = vec2(g.x * cos(bank) - g.y * sin(bank), g.x * sin(bank) + g.y * cos(bank));
     vGCore = 1.0 - clamp(gr / 6.5, 0.0, 1.0);   // core glows brighter
 
     // ---- Brain: the galaxy condenses into a mind deep in the page ------

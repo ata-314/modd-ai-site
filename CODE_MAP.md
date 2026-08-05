@@ -20,8 +20,10 @@ Defined in `app/page.tsx` — reorder or remove sections there.
 | — | Top navigation (glass capsule on scroll) | `components/layout/Header.tsx` | `data/siteContent.ts` |
 | 01 | Hero — boot loader, headline, CTAs over the particle experience | `components/sections/Hero.tsx` | `data/siteContent.ts → hero` |
 | 02 | Showreel video frame | `components/sections/Showreel.tsx` | `data/siteContent.ts → showreel` |
-| 03 | Manifesto statement | `components/sections/Manifesto.tsx` | `data/siteContent.ts → manifesto` |
-| 04 | Services accordion (glass cards) | `components/sections/Services.tsx` | `data/services.ts` |
+| 03 | Auto-scrolling 9:16 work reels | `components/sections/WorkReel.tsx` | `data/reels.ts` |
+| 04 | Manifesto statement | `components/sections/Manifesto.tsx` | `data/siteContent.ts → manifesto` |
+| 05 | Services accordion (glass cards) | `components/sections/Services.tsx` | `data/services.ts` |
+| 06 | Toolbox marquee (edges fade to black) | `components/sections/Tools.tsx` | `data/tools.ts` |
 | 05 | Before/After slider (glass) | `components/sections/BeforeAfter.tsx` | `data/transformations.ts → comparisons` |
 | 06 | Pipeline stages | `components/sections/Pipeline.tsx` | `data/transformations.ts → pipelineStages` |
 | 07 | Selected work grid (glass) | `components/sections/SelectedWork.tsx` | `data/projects.ts` |
