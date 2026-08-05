@@ -33,11 +33,14 @@ Defined in `app/page.tsx` — reorder or remove sections there.
 ## The particle experience (`components/experience/`)
 
 One fixed WebGL canvas behind everything. A single particle system morphs
-**cyberpunk code valley → glyph building → galaxy → human brain** with
+**cyberpunk code valley → glyph building → living neural brain** with
 scroll. The sea phase is a ridged Matrix-glyph terrain: mountain ranges flank
 a flat data-corridor, streaming toward the viewer, ridgelines glowing accent.
-The galaxy pours downward as the page scrolls and condenses into a wrinkled
-two-hemisphere brain at ~50–78% of the page, fully reversible. The building
+The building dissolves directly into a realistic procedural brain (gyri
+ripples, longitudinal fissure, cerebellum lobe): cortex code glyphs, pulsing
+soma nodes and lime firing sparks racing between paired cortex points.
+Firing density multiplies with page depth, and the whole brain drifts from
+right to left as the user scrolls — fully reversible. The building
 is the real GLB rendered as a legible hologram (`HoloBuilding.tsx` — lightly
 cooled facade texture so the MODD signage reads, fresnel rim, gentle
 scanlines, wireframe skeleton) wrapped in code glyphs in three architectural
@@ -48,7 +51,7 @@ pale-green fill on the facades, sparse rising particles inside the volume.
 The solid model is never rendered. A computed cinematic camera frames it
 front-left three-quarter (fov 38, entrance-level looking up, distance from
 the model's Box3 so it fills ~60% of any viewport), with slow dolly-in, a
-≤10° scroll orbit and a counterclockwise dissolve into the galaxy. ~30% of
+≤10° scroll orbit and a counterclockwise dissolve into the neural brain. ~30% of
 the field never morphs — a permanent code sea flows behind everything.
 Raw 35MB Meshy source lives untracked in `assets-src/`; the photo
 (`public/building/bina.webp`) is the fallback sampler (failure logged,
