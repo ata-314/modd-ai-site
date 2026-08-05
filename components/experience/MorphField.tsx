@@ -22,8 +22,8 @@ const vertexShader = /* glsl */ `
   attribute vec3 aBuild;
   attribute vec3 aNormal;   // building surface normal — hologram lighting
   attribute float aLayer;   // 0 = architectural edge, 1 = surface, 2 = interior
+  attribute vec3 aGalaxy;
   attribute vec3 aBrain;
-  attribute vec3 aBrain2;  // firing partner — signals travel between the two
   attribute float aDelay;   // 0..0.6 build stagger (roof + edges first)
   attribute float aSize;
   attribute float aGlyph;
@@ -45,8 +45,7 @@ const vertexShader = /* glsl */ `
 
   varying float vGlyph;
   varying float vB;
-  varying float vSig;
-  varying float vNode;
+  varying float vG;
   varying float vBr;
   varying float vCrest;
   varying float vLum;
@@ -60,6 +59,7 @@ const vertexShader = /* glsl */ `
   varying float vScan;
   varying float vLayer;
   varying float vWave;
+  varying float vGCore;
 
   const float DEPTH = 46.0;
 
@@ -146,40 +146,47 @@ const vertexShader = /* glsl */ `
 
     vec3 b = bl + uBOff;   // grounded on the code floor, slightly right
 
-    // ---- Brain: the building dissolves into a living mind --------------
-    // Roles by seed: cortex glyphs (most), neuron somas (~10%, pulsing
-    // round nodes) and traveling signals (~10%, round sparks running
-    // between two cortex points — the neural firings). Firing density
-    // multiplies as the page scrolls deeper; the whole brain drifts from
-    // the right toward the left while slowly turning.
-    float wBr = wG;
-    float isSig = step(0.90, aSeed);
-    float isNode = step(0.80, aSeed) - isSig;
-    // connections come alive with scroll depth
-    float act = step(fract(aSeed * 57.31), 0.20 + uDoc * 0.80);
-    float trip = fract(uTime * (0.22 + aSeed * 0.45) + aSeed * 13.0);
-    vec3 br = mix(aBrain, mix(aBrain, aBrain2, trip), isSig);
-    // slow turn + breathing
-    float bra = uTime * 0.05 + uDoc * 0.9;
+    // ---- Galaxy: layered spiral — bulge, arms, halo — fluid swirl ------
+    vec3 g = aGalaxy;
+    float gr = length(g.xz);
+    // differential rotation + two overlapping breathing currents: the
+    // arms shear and billow instead of turning as one rigid disk
+    float ga = uTime * 0.05 + uDoc * 2.2 + (5.5 - gr) * 0.14
+             + sin(uTime * 0.30 + gr * 1.6 + aSeed * 6.283) * 0.26
+             + sin(uTime * 0.17 - gr * 0.9 + aSeed * 12.6) * 0.12;
+    float gc = cos(ga);
+    float gs = sin(ga);
+    g.xz = vec2(g.x * gc - g.z * gs, g.x * gs + g.z * gc);
+    g.y += sin(uTime * 0.22 + gr * 1.9 + aSeed * 12.0) * 0.26
+         + sin(uTime * 0.43 + aSeed * 40.0) * 0.05;
+    g *= 1.0 + uDoc * 0.35 + sin(uTime * 0.2 + aSeed * 3.0) * 0.03;
+    // tilt the disk toward the camera
+    float tc = cos(-0.45);
+    float ts = sin(-0.45);
+    g.yz = vec2(g.y * tc - g.z * ts, g.y * ts + g.z * tc);
+    // the whole form streams downward as the page scrolls — each particle
+    // falls at its own rate, so the spiral pours rather than translates
+    g.y -= uDoc * (1.6 + aSeed * 0.9);
+    vGCore = 1.0 - clamp(gr / 6.5, 0.0, 1.0);   // core glows brighter
+
+    // ---- Brain: the galaxy condenses into a mind deep in the page ------
+    float wBr = smoothstep(0.50, 0.78, uDoc) * wG;
+    vec3 br = aBrain;
+    float bra = uTime * 0.07 + uDoc * 1.2;
     float bc = cos(bra);
     float bs = sin(bra);
     br.xz = vec2(br.x * bc - br.z * bs, br.x * bs + br.z * bc);
-    br *= 1.0 + 0.015 * sin(uTime * 1.1 + aSeed * 2.0);
-    br.y += sin(uTime * 0.5 + aSeed * 9.42) * 0.04;
-    // right → left journey as the page scrolls down
-    float travel = smoothstep(0.12, 0.85, uDoc);
-    br.x += mix(1.7, -2.4, travel);
-    br.y += -0.1 - travel * 0.5;
-    vSig = isSig * act;
-    vNode = isNode;
+    br *= 1.0 + 0.02 * sin(uTime * 1.1 + aSeed * 2.0);   // breathing
+    br.y += sin(uTime * 0.5 + aSeed * 9.42) * 0.05;
 
     // ---- Blend ---------------------------------------------------------
     vec3 pos = mix(sea, gather, toGather);
     pos = mix(pos, b, wB);
+    pos = mix(pos, g, wG);
     pos = mix(pos, br, wBr);
 
-    // turbulence only while mid-morph, so the dissolve reads as physical
-    float bell = wBr * (1.0 - wBr) * 2.0;
+    // turbulence only while mid-morph, so each dissolve reads as physical
+    float bell = max(wG * (1.0 - wG), wBr * (1.0 - wBr)) * 2.0;
     pos += vec3(
       sin(aSeed * 12.9 + uTime * 1.1),
       cos(aSeed * 7.7 + uTime * 1.4),
@@ -196,9 +203,9 @@ const vertexShader = /* glsl */ `
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mv;
     // sea glyphs render much larger so the terrain reads at rest; the
-    // building keeps tighter glyphs; neuron nodes and firings get weight
-    float formed = clamp(wB + wBr, 0.0, 1.0);
-    float sizeBoost = mix(1.7, 1.0, formed) + wBr * (0.15 + 0.45 * (vSig + vNode));
+    // building keeps tighter glyphs, the galaxy sits in between
+    float formed = clamp(wB + wG + wBr, 0.0, 1.0);
+    float sizeBoost = mix(1.7, 1.0, formed) + 0.3 * max(wG, wBr);
     gl_PointSize = aSize * sizeBoost * uSizeMul * uPR * (12.5 / max(-mv.z, 0.5));
 
     // ---- Alpha ---------------------------------------------------------
@@ -215,17 +222,14 @@ const vertexShader = /* glsl */ `
                  + isInt * 0.1;
     bAlpha += vScan * 0.35;
     a = mix(a, bAlpha, wB);
-    // brain: cortex glyphs stay soft, somas pulse, firings flash bright —
-    // and inactive signal particles disappear entirely
-    float brainA = 0.42
-                 + isNode * 0.35
-                 + isSig * (act * 0.6 - 0.42);
-    a = mix(a, brainA, wBr);
+    a = mix(a, 0.5 + vGCore * 0.3, wG);
+    a = mix(a, 0.62, wBr);
     a += smoothstep(1.35, 0.0, md) * 0.25;                     // pointer glow
     vAlpha = a * uDim;
 
     vGlyph = aGlyph;
     vB = wB;
+    vG = wG;
     vBr = wBr;
     vLayer = aLayer;
     vCrest = crest;
@@ -233,9 +237,12 @@ const vertexShader = /* glsl */ `
     vEdge = aEdge;
     vSeed = aSeed;
     vPulse = 0.6 + 0.4 * sin(uTime * 2.2 + aSeed * 25.0);
-    // sea + building stay pure Matrix glyphs; neuron somas and traveling
-    // firings render as round energy points inside the brain
-    vDot = (isSig + isNode) * smoothstep(0.3, 0.6, wBr);
+    // sea + building stay pure Matrix glyphs; bare energy points appear in
+    // the galaxy, and the brain grows extra neuron nodes among its codes
+    vDot = max(
+      step(0.93, aSeed) * smoothstep(0.25, 0.6, wG),
+      step(0.86, aSeed) * smoothstep(0.3, 0.7, wBr)
+    );
   }
 `;
 
@@ -243,6 +250,7 @@ const fragmentShader = /* glsl */ `
   uniform sampler2D uAtlas;
   varying float vGlyph;
   varying float vB;
+  varying float vG;
   varying float vBr;
   varying float vCrest;
   varying float vLum;
@@ -256,8 +264,7 @@ const fragmentShader = /* glsl */ `
   varying float vScan;
   varying float vLayer;
   varying float vWave;
-  varying float vSig;
-  varying float vNode;
+  varying float vGCore;
 
   const float GRID = ${ATLAS_GRID.toFixed(1)};
 
@@ -290,13 +297,19 @@ const fragmentShader = /* glsl */ `
     buildCol = mix(buildCol, lime, strong * (0.5 + 0.5 * vLit));
     buildCol += lime * vRim * 0.55;                         // silhouette rim
     buildCol += lime * vScan * 0.6;                         // formation band
-    // brain: warm off-white cortex codes, pale-green pulsing somas and
-    // bright lime firing sparks racing between them
-    vec3 brCol = vec3(0.82, 0.83, 0.86);
-    brCol = mix(brCol, vec3(0.55, 0.78, 0.50) * (0.7 + 0.5 * vPulse), vNode);
-    brCol = mix(brCol, lime * (0.8 + 0.4 * vPulse), vSig);
+    // galaxy: varied starlight — cool blue-white and warm white stars,
+    // sparse lime accents, the core burning brighter than the arms
+    vec3 starCool = vec3(0.70, 0.76, 0.88);
+    vec3 starWarm = vec3(0.92, 0.87, 0.78);
+    vec3 galCol = mix(starCool, starWarm, step(0.5, fract(vSeed * 7.31)));
+    galCol *= 0.75 + vGCore * 0.5;
+    galCol = mix(galCol, lime, step(vSeed, 0.06));
+    // brain: soft mind-gray codes; neuron nodes + synapses pulse accent
+    float synapse = max(step(vSeed, 0.12), vDot * 0.8);
+    vec3 brCol = mix(vec3(0.80, 0.82, 0.87), lime * vPulse, synapse);
 
     vec3 col = mix(seaCol, buildCol, vB);
+    col = mix(col, galCol, vG);
     col = mix(col, brCol, vBr);
 
     gl_FragColor = vec4(col, shape * vAlpha);
@@ -327,47 +340,8 @@ export default function MorphField({ sample, quality }: Props) {
     const startsArr = new Float32Array(n * 3);
     const builds = new Float32Array(n * 3);
     const normalsArr = new Float32Array(n * 3);
+    const galaxies = new Float32Array(n * 3);
     const brains = new Float32Array(n * 3);
-    const brains2 = new Float32Array(n * 3);
-
-    // Realistic-leaning procedural cortex: deformed sphere with layered
-    // gyri ripples, longitudinal fissure, flattened base, hemisphere gap
-    // and a ~10% cerebellum lobe tucked low at the back. Deterministic.
-    const BRAIN_SCALE = 2.7;
-    const brainPoint = (k: number): [number, number, number] => {
-      const bu = hash(k);
-      const bv = hash(k + 50000);
-      if (hash(k + 90000) < 0.1) {
-        // cerebellum
-        const t2 = bu * Math.PI * 2;
-        const p2 = Math.acos(2 * bv - 1);
-        const wr2 = Math.sin(Math.cos(t2) * 9.0 + Math.sin(p2) * 7.0);
-        const r2 = 0.34 * (1 + wr2 * 0.05);
-        return [
-          Math.sin(p2) * Math.cos(t2) * r2 * 1.1 * BRAIN_SCALE,
-          (Math.cos(p2) * r2 * 0.7 - 0.52) * BRAIN_SCALE + 0.3,
-          (Math.sin(p2) * Math.sin(t2) * r2 - 0.72) * BRAIN_SCALE,
-        ];
-      }
-      const theta = bu * Math.PI * 2;
-      const phi = Math.acos(2 * bv - 1);
-      let bx = Math.sin(phi) * Math.cos(theta);
-      let by = Math.cos(phi);
-      let bz = Math.sin(phi) * Math.sin(theta);
-      const wrinkle =
-        Math.sin(bx * 6.2 + bz * 4.1 + by * 3.0) *
-          Math.sin(bz * 7.3 - bx * 5.2 + by * 2.1) +
-        0.5 * Math.sin(bx * 11.0 - bz * 9.0 + by * 5.0);
-      let rr = 1 + wrinkle * 0.06;
-      const fissure = Math.max(0, 1 - Math.abs(bx) / 0.13) * Math.max(0, by + 0.1);
-      rr -= fissure * 0.2;
-      bx *= 0.84 * rr;
-      by *= 0.74 * rr;
-      bz *= 1.08 * rr;
-      bx += Math.sign(bx) * 0.04;
-      if (by < -0.4) by = -0.4 + (by + 0.4) * 0.45;
-      return [bx * BRAIN_SCALE, by * BRAIN_SCALE + 0.3, bz * BRAIN_SCALE];
-    };
     const delays = new Float32Array(n);
     const sizes = new Float32Array(n);
     const glyphs = new Float32Array(n);
@@ -411,18 +385,69 @@ export default function MorphField({ sample, quality }: Props) {
       lums[i] = sample.lums[s];
       sizes[i] = sample.sizes[s] * 0.9;
 
+      // galaxy slot: three populations, deterministic — a dense central
+      // bulge, three arms that run tight near the core and loosen outward,
+      // and a sparse spherical halo around everything
+      const u = hash(i + 300000);
+      const kind = hash(i + 950000);
+      if (kind < 0.2) {
+        // central bulge
+        const rr2 = 1.15 * Math.pow(u, 0.75);
+        const th = hash(i + 400000) * Math.PI * 2;
+        const ph = Math.acos(2 * hash(i + 500000) - 1);
+        galaxies[i * 3] = Math.sin(ph) * Math.cos(th) * rr2;
+        galaxies[i * 3 + 1] = Math.cos(ph) * rr2 * 0.5;
+        galaxies[i * 3 + 2] = Math.sin(ph) * Math.sin(th) * rr2;
+      } else if (kind < 0.26) {
+        // faint halo sprinkle
+        const rad = 2.5 + u * 4.2;
+        const th = hash(i + 400000) * Math.PI * 2;
+        galaxies[i * 3] = Math.cos(th) * rad;
+        galaxies[i * 3 + 1] = (hash(i + 500000) - 0.5) * 1.6;
+        galaxies[i * 3 + 2] = Math.sin(th) * rad;
+      } else {
+        // spiral arms — jitter grows with radius so edges fray naturally
+        const rad = 5.6 * Math.pow(u, 0.58);
+        const arm = i % 3;
+        const angle =
+          (rad / 5.6) * 5.2 +
+          arm * ((Math.PI * 2) / 3) +
+          (hash(i + 400000) - 0.5) * (0.22 + rad * 0.09);
+        const thickness = (hash(i + 500000) - 0.5) * (1.15 - rad / 7);
+        galaxies[i * 3] = Math.cos(angle) * rad;
+        galaxies[i * 3 + 1] = thickness * 0.9;
+        galaxies[i * 3 + 2] = Math.sin(angle) * rad;
+      }
+
       glyphs[i] = Math.floor(hash(i + 600000) * GLYPH_COUNT);
       seeds[i] = hash(i + 700000);
 
-      // brain slot + a distinct partner point — firings travel between them
-      const bp = brainPoint(i + 800000);
-      brains[i * 3] = bp[0];
-      brains[i * 3 + 1] = bp[1];
-      brains[i * 3 + 2] = bp[2];
-      const bp2 = brainPoint(i + 1700000);
-      brains2[i * 3] = bp2[0];
-      brains2[i * 3 + 1] = bp2[1];
-      brains2[i * 3 + 2] = bp2[2];
+      // brain slot: two wrinkled hemispheres on a deformed sphere
+      const bu = hash(i + 800000);
+      const bv = hash(i + 900000);
+      const theta = bu * Math.PI * 2;
+      const phi = Math.acos(2 * bv - 1);
+      let bx = Math.sin(phi) * Math.cos(theta);
+      let by = Math.cos(phi);
+      let bz = Math.sin(phi) * Math.sin(theta);
+      // cortical folds — layered high-frequency ripples on the radius
+      const wrinkle =
+        Math.sin(bx * 6.2 + bz * 4.1 + by * 3.0) *
+        Math.sin(bz * 7.3 - bx * 5.2 + by * 2.1);
+      let rr = 1 + wrinkle * 0.07;
+      // longitudinal fissure between the hemispheres, deepest on top
+      const fissure =
+        Math.max(0, 1 - Math.abs(bx) / 0.14) * Math.max(0, by + 0.15);
+      rr -= fissure * 0.18;
+      bx *= 0.82 * rr;
+      by *= 0.74 * rr;
+      bz *= 1.06 * rr;
+      bx += Math.sign(bx) * 0.045; // hemisphere separation
+      if (by < -0.4) by = -0.4 + (by + 0.4) * 0.45; // flattened base
+      const BRAIN_SCALE = 2.7;
+      brains[i * 3] = bx * BRAIN_SCALE;
+      brains[i * 3 + 1] = by * BRAIN_SCALE + 0.3;
+      brains[i * 3 + 2] = bz * BRAIN_SCALE;
     }
 
     const geo = new THREE.BufferGeometry();
@@ -433,8 +458,8 @@ export default function MorphField({ sample, quality }: Props) {
     geo.setAttribute("aBuild", new THREE.BufferAttribute(builds, 3));
     geo.setAttribute("aNormal", new THREE.BufferAttribute(normalsArr, 3));
     geo.setAttribute("aLayer", new THREE.BufferAttribute(layersArr, 1));
+    geo.setAttribute("aGalaxy", new THREE.BufferAttribute(galaxies, 3));
     geo.setAttribute("aBrain", new THREE.BufferAttribute(brains, 3));
-    geo.setAttribute("aBrain2", new THREE.BufferAttribute(brains2, 3));
     geo.setAttribute("aDelay", new THREE.BufferAttribute(delays, 1));
     geo.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
     geo.setAttribute("aGlyph", new THREE.BufferAttribute(glyphs, 1));

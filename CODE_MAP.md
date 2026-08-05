@@ -33,14 +33,14 @@ Defined in `app/page.tsx` — reorder or remove sections there.
 ## The particle experience (`components/experience/`)
 
 One fixed WebGL canvas behind everything. A single particle system morphs
-**cyberpunk code valley → glyph building → living neural brain** with
+**cyberpunk code valley → glyph building → galaxy → human brain** with
 scroll. The sea phase is a ridged Matrix-glyph terrain: mountain ranges flank
 a flat data-corridor, streaming toward the viewer, ridgelines glowing accent.
-The building dissolves directly into a realistic procedural brain (gyri
-ripples, longitudinal fissure, cerebellum lobe): cortex code glyphs, pulsing
-soma nodes and lime firing sparks racing between paired cortex points.
-Firing density multiplies with page depth, and the whole brain drifts from
-right to left as the user scrolls — fully reversible. The building
+The building dissolves into a three-population galaxy — burning central
+bulge, three arms tight at the core and frayed outward, sparse halo —
+with differential rotation and layered breathing currents, warm/cool
+starlight and lime accents. It pours downward with scroll and condenses
+into a wrinkled brain deep in the page — fully reversible. The building
 is the real GLB rendered as a legible hologram (`HoloBuilding.tsx` — lightly
 cooled facade texture so the MODD signage reads, fresnel rim, gentle
 scanlines, wireframe skeleton) wrapped in code glyphs in three architectural
